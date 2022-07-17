@@ -14,6 +14,8 @@ import torch
 import sys
 
 
+##
+
 class SegDetector(nn.Cell):
 
     def __init__(self,
@@ -109,7 +111,8 @@ class SegDetector(nn.Cell):
                       4, 3, pad_mode="pad", padding=1, has_bias=bias, weight_init="ones"),  # plane:1024->256
             nn.BatchNorm2d(inner_channels // 4, use_batch_statistics=None, momentum=0.1),
             nn.ReLU(),
-            nn.Conv2dTranspose(in_channels // 4, in_channels // 4, 2, stride=2, weight_init="ones", has_bias=True),  # size*2
+            nn.Conv2dTranspose(in_channels // 4, in_channels // 4, 2, stride=2, weight_init="ones", has_bias=True),
+            # size*2
             nn.BatchNorm2d(inner_channels // 4, use_batch_statistics=None, momentum=0.1),
             nn.ReLU(),
             nn.Conv2dTranspose(in_channels // 4, 1, 2, stride=2, weight_init="ones", has_bias=True),  # size*2, plane=1
