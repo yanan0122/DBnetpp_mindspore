@@ -1,0 +1,69 @@
+train:
+      gpu_id: '0'
+      backbone: 'resnet18'
+      pretrained: True
+      HeadName: 'DB'
+      in_channels: [64, 128, 256, 512]  #[256, 512, 1024, 2048] 
+      inner_channels: 256
+      k: 50
+      adaptive: True
+      start_val_epoch: 1000
+      n_epoch: 1
+      batch_size: 16
+      use_sr: True
+      sr_lr: 0.00001
+      base_lr: 0.002
+      num_workers: 0
+      show_step: 5
+      print_format: 'linux'  # linux or windows
+      restore: True
+      resume: "/opt/nvme1n1/wz/dbnet/pretrained_synthtext_resnet18.ckpt"
+      checkpoints: './checkpoints'
+      is_icdar2015: True
+      is_transform: True
+      is_show: False
+      train_img_format: '.jpg'
+      val_img_format: '.jpg'
+      train_img_dir: "/opt/nvme1n1/wz/dbnet_torch/datasets/icdar2015/train_images/"
+      train_gt_dir: "/opt/nvme1n1/wz/dbnet_torch/datasets/icdar2015/train_gts/"
+      val_img_dir: "/opt/nvme1n1/wz/dbnet_torch/datasets/icdar2015/test_images/"
+      val_gt_dir: "/opt/nvme1n1/wz/dbnet_torch/datasets/icdar2015/test_gts/"
+      radom_angle: [-10, 10]
+      output_path: './outputs_val'
+      decay_method: 'e_decay'  # e_decay: 指数衰减, s_decay: 指定epoch衰减
+      schedule: [500,800,1000]
+      gama: 0.1
+test:
+      gpu_id: '0'
+      pretrained: False
+      merge_conv_bn: False
+      adaptive: False
+      short_side: 736
+      thresh: 0.5
+      box_thresh: 0.6
+      unclip_ratio: 2
+      min_size: 3
+      max_candidates: 1000
+      is_poly: False
+      is_icdar2015: True
+      test_img_format: '.jpg'
+      test_img_dir: 
+      test_gt_dir: 
+      checkpoints: 
+      out_dir: './outputs_test'
+      
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      

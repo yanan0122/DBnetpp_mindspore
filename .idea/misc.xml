@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_16" project-jdk-name="Python 3.7 (pytorch)" project-jdk-type="Python SDK" />
+  <component name="com.huawei.mind.studio.ssh.deploy.persistent.DeploySettingsState">
+    <option name="deployModels">
+      <list>
+        <DeployModel>
+          <option name="name" value="ascend-aarch64-linux (687901be-3f39-46e5-b0cb-b5398d734919)" />
+          <option name="relationToolChainsUuid" value="687901be-3f39-46e5-b0cb-b5398d734919" />
+          <option name="uuid" value="68730703-f28d-416d-b958-8ac58268e585" />
+          <option name="deployConnectionModel" value="{&quot;deployConnectionType&quot;:&quot;SFTP&quot;,&quot;sshConnectionModel&quot;:{&quot;uuid&quot;:&quot;50b7a08a-463f-44d5-8c20-d420b135e9b0&quot;}}" />
+          <option name="deployMappingModels" value="[{&quot;deploymentPath&quot;:&quot;/tmp/68730703-f28d-416d-b958-8ac58268e585&quot;,&quot;localPath&quot;:&quot;D:\\000yanan\\蔡老师内容\\论文部分\\代码\\dbnet_ms&quot;}]" />
+        </DeployModel>
+      </list>
+    </option>
+  </component>
+</project>
