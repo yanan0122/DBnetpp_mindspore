@@ -14,8 +14,6 @@ import torch
 import sys
 
 
-##
-
 class SegDetector(nn.Cell):
 
     def __init__(self,
