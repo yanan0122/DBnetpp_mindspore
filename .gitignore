@@ -144,3 +144,4 @@ run
 # ide
 .vscode
 .idea
+dbnet/.idea
