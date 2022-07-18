@@ -1,4 +1,4 @@
-#coding:utf-8
+# coding:utf-8
 import sys
 
 import mindspore
@@ -133,7 +133,7 @@ class Bottleneck(nn.Cell):
 
         if self.downsample is not None:
             residual = self.downsample(x)
-        
+
         out += residual
         out = self.relu(out)
 
@@ -286,24 +286,45 @@ def test_conv():
     ones = ops.Ones()
 
     data = ones((1, 64, 184, 320), ms.float32)
-    
+
     print("原尺寸：{}".format(data.shape))
 
     conv = nn.Conv2d(64, 64, kernel_size=3, stride=1, pad_mode="pad",
                      padding=1, weight_init="ones")
 
     output = conv(data)
-    
+
     print("卷积后尺寸：{}".format(output.shape))
 
     print(output[0][0][1][:100])
 
 def test_dcn():
-    
+
     ones = ops.Ones()
 
     data = ones((1, 64, 184, 320), ms.float32)
-    
+
+    print("原尺寸：{}".format(data.shape))
+
+    from dcn import DeformConv2d
+
+    print("原尺寸：{}".format(data.shape))
+
+    conv = nn.Conv2d(64, 64, kernel_size=3, stride=1, pad_mode="pad",
+                     padding=1, weight_init="ones")
+
+    output = conv(data)
+
+    print("卷积后尺寸：{}".format(output.shape))
+
+    print(output[0][0][1][:100])
+
+
+def test_dcn():
+    ones = ops.Ones()
+
+    data = ones((1, 64, 184, 320), ms.float32)
+
     print("原尺寸：{}".format(data.shape))
 
     from dcn import DeformConv2d
@@ -311,11 +332,13 @@ def test_dcn():
     conv = DeformConv2d(64, 64, kernel_size=3, padding=1, stride=1)
 
     output = conv(data)
-    
+
+    print("卷积后尺寸：{}".format(output.shape))
+
     print("卷积后尺寸：{}".format(output.shape))
 
     print(output[0][0][1][:100])
-    
+
 
 
 def test_bn():
@@ -375,7 +398,8 @@ def test_resnet18():
     for t in output:
         print(t.shape)
     print(output[0][0][0][1][:100])
-    
+
+
 def test_resnet50():
     data = np.load("/old/wlh/DBnetpp_mindspore/dbnet/test.npy")
 
