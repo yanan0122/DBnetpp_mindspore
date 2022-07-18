@@ -56,22 +56,28 @@ class BasicBlock(nn.Cell):
 
     def construct(self, x):
         residual = x
-
+        # print("进入block")
+        # print(x.shape)
+        
         out = self.conv1(x)
         # print("conv1 ",out[0][0][0][:5])
+        
         out = self.bn1(out)
         # print("bn1 ",out[0][0][0][:5])
+        
         out = self.relu(out)
         # print("relu1 ",out[0][0][0][:5])
+        
         out = self.conv2(out)
         # print("conv2 ",out[0][0][0][:5])
+        
         out = self.bn2(out)
         # print("bn2 ",out[0][0][0][:5])
 
         if self.downsample is not None:
             residual = self.downsample(x)
-        print(out.shape)
-        print(residual.shape)
+        # print(out.shape)
+        # print(residual.shape)
         out += residual
         out = self.relu(out)
 
@@ -83,7 +89,7 @@ class Bottleneck(nn.Cell):
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, dcn=None):
         super(Bottleneck, self).__init__()
-
+        # print("define bottleneck")
         self.with_dcn = dcn is not None
 
         # self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
@@ -96,16 +102,16 @@ class Bottleneck(nn.Cell):
         self.with_modulated_dcn = False
         if self.with_dcn:
             from dcn import DeformConv2d
-            self.conv2 = DeformConv2d(planes, planes, kernel_size=3, padding=1, stride=stride)
+            self.conv2 = DeformConv2d(planes, planes, kernel_size=3, padding=1)
 
         else:
             # self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
-            self.conv2 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride, has_bias=False, pad_mode="pad",
+            self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, has_bias=False, pad_mode="pad",
                                    padding=1, weight_init="ones")
 
         self.bn2 = nn.BatchNorm2d(planes, use_batch_statistics=None, momentum=0.1)
         # self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
-        self.conv3 = nn.Conv2d(inplanes, planes * 4, kernel_size=1, has_bias=False, weight_init="ones")
+        self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, has_bias=False, weight_init="ones")
 
         # self.bn3 = BatchNorm2d(planes * 4)
         self.bn3 = nn.BatchNorm2d(planes * 4, use_batch_statistics=None, momentum=0.1)
@@ -118,9 +124,11 @@ class Bottleneck(nn.Cell):
         self.dcn = dcn
         self.with_dcn = dcn is not None
 
-    def forward(self, x):
+    def construct(self, x):
+        # print("进入bottleneck")
         residual = x
-
+        
+        # print("x.shape:{}".format(x.shape))
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
@@ -133,7 +141,7 @@ class Bottleneck(nn.Cell):
 
         if self.downsample is not None:
             residual = self.downsample(x)
-
+        
         out += residual
         out = self.relu(out)
 
@@ -180,6 +188,7 @@ class ResNet(nn.Cell):
         downsample = None
 
         if stride != 1 or self.inplanes != planes * block.expansion:
+            # downsample的功能是调整residual使其和out保持相同尺寸，out的变化由plane和stride控制
             downsample = nn.SequentialCell(
                 # set initializer to constant for debugging.
                 nn.Conv2d(self.inplanes, planes * block.expansion, pad_mode="pad",
@@ -219,7 +228,7 @@ class ResNet(nn.Cell):
 
         x2 = self.layer1(x)
         # print("x2 ",x2[0][0][0][:5])
-
+        # print(x2.shape)
         x3 = self.layer2(x2)
         # print("x3 ",x3[0][0][0][:5])
 
@@ -298,27 +307,6 @@ def test_conv():
 
     print(output[0][0][1][:100])
 
-def test_dcn():
-
-    ones = ops.Ones()
-
-    data = ones((1, 64, 184, 320), ms.float32)
-
-    print("原尺寸：{}".format(data.shape))
-
-    from dcn import DeformConv2d
-
-    print("原尺寸：{}".format(data.shape))
-
-    conv = nn.Conv2d(64, 64, kernel_size=3, stride=1, pad_mode="pad",
-                     padding=1, weight_init="ones")
-
-    output = conv(data)
-
-    print("卷积后尺寸：{}".format(output.shape))
-
-    print(output[0][0][1][:100])
-
 
 def test_dcn():
     ones = ops.Ones()
@@ -335,10 +323,7 @@ def test_dcn():
 
     print("卷积后尺寸：{}".format(output.shape))
 
-    print("卷积后尺寸：{}".format(output.shape))
-
     print(output[0][0][1][:100])
-
 
 
 def test_bn():
@@ -369,6 +354,25 @@ def test_basicblock():
 
     print(output.shape)
     print("test BasicBlock output ", output[0][3][3][:100])
+    
+def test_Bottleneck():
+    block = Bottleneck(inplanes=64, planes=64)
+
+    # np.random.seed(0)
+    # data = np.random.rand(1,64,184,320)
+
+    ones = ops.Ones()
+
+    data = ones((1, 64, 256, 256), ms.float32)
+
+    # print("test BasicBlock input ", data[0][0][0][:100])
+
+    inp_tensor = Tensor(data, dtype=ms.float32)
+
+    output = block(inp_tensor)
+
+    print(output.shape)
+    print("test Bottleneck output ", output[0][3][3][:100])
 
 
 def test_deformable_resnet18():
@@ -413,8 +417,23 @@ def test_resnet50():
     for t in output:
         print(t.shape)
     print(output[0][0][0][1][:100])
+    
+
+def test_deformative_resnet50():
+    data = np.load("/old/wlh/DBnetpp_mindspore/dbnet/test.npy")
+
+    print("原图大小为：{}".format(data.shape))
+    resnet = ResNet(Bottleneck, [3, 4, 6, 3], dcn={'deformable_groups': 1})
+
+    inp_tensor = Tensor(data, dtype=ms.float32)
+
+    output = resnet(inp_tensor)
+
+    for t in output:
+        print(t.shape)
+    print(output[0][0][0][1][:100])
 
 
 if __name__ == "__main__":
-    context.set_context(device_id=3, mode=context.GRAPH_MODE)
-    test_resnet50()
+    context.set_context(device_id=2, mode=context.GRAPH_MODE)
+    test_deformative_resnet50()
