@@ -1,8 +1,7 @@
 import mindspore.nn as nn
 import mindspore.ops as ops
 
-from mindspore import context
-from numpy import expand_dims
+from mindspore import Tensor, context
 context.set_context(device_id=5, mode=context.GRAPH_MODE)
 
 class SpatialAttention(nn.Cell):
@@ -23,7 +22,6 @@ class SpatialAttention(nn.Cell):
 
         self.reduce_mean = ops.ReduceMean(True)
         self.expand_dims = ops.ExpandDims()
-        self.split = ops.Split(1, N)
 
     def construct(self, x):
         x1 = self.channel_wise(x)
@@ -38,13 +36,10 @@ class SpatialAttention(nn.Cell):
         y = self.attention_wise(y)
         y = self.sigmoid(y)
 
-        return self.split(y)
+        return y
 
 
 class ASF(nn.Cell):
-    '''
-    The input for calling must be a list or tuple consisting of tensors.
-    '''
     def __init__(self, inner_channels=256, N=4):
         super(ASF, self).__init__()
 
@@ -56,15 +51,13 @@ class ASF(nn.Cell):
         self.expand_dims = ops.ExpandDims()
 
     def construct(self, x):
-        if len(x) != self.N:
-            exit(1)
-        X = self.expand_dims(self.concat(x), 0)
+        X = x.reshape(1, x.shape[0]*x.shape[1], *x.shape[2:])
 
         S = self.conv(X)
-        A = self.spatial_attention(S)
+        A = self.spatial_attention(S).transpose(1, 0, 2, 3)
+        F = (A * x).reshape(1, x.shape[0]*x.shape[1], *x.shape[2:])
 
-        F = self.concat([(A[i] * x[i]).squeeze() for i in range(self.N)])
-        return self.expand_dims(F, 0)
+        return F
 
 
 if __name__ == '__main__':
@@ -73,11 +66,6 @@ if __name__ == '__main__':
     concat = ops.Concat()
 
     X = std((4, 64, 50, 100))
-    X = split(X)
-    X = list(X)
-    for i in range(len(X)):
-        X[i] = X[i].squeeze()
-    y = concat(X)
 
     asf = ASF()
     result = asf(X)
