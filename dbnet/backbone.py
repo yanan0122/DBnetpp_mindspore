@@ -42,10 +42,8 @@ class BasicBlock(nn.Cell):
 
             deformable_groups = dcn.get('deformable_groups', 1)
             from dcn import DeformConv2d
-            offset_channels = 18
-            self.conv2_offset = nn.Conv2d(planes, deformable_groups * offset_channels, stride=stride, kernel_size=3,
-                                          pad_mode="pad", padding=1, weight_init="ones")  # 获得每个位置上，deform卷积的偏移量
-            self.conv2 = DeformConv2d(planes, planes, kernel_size=3, padding=1, stride=stride)
+
+            self.conv2 = DeformConv2d(planes, planes, kernel_size=3, padding=1, stride=1)
 
         else:
             self.conv2 = conv3x3(planes, planes)
@@ -65,19 +63,15 @@ class BasicBlock(nn.Cell):
         # print("bn1 ",out[0][0][0][:5])
         out = self.relu(out)
         # print("relu1 ",out[0][0][0][:5])
-        if self.with_dcn:
-            offset = self.conv2_offset(out)
-
-            out = self.conv2(out, offset)
-        else:
-            out = self.conv2(out)
+        out = self.conv2(out)
         # print("conv2 ",out[0][0][0][:5])
         out = self.bn2(out)
         # print("bn2 ",out[0][0][0][:5])
 
         if self.downsample is not None:
             residual = self.downsample(x)
-
+        print(out.shape)
+        print(residual.shape)
         out += residual
         out = self.relu(out)
 
@@ -101,12 +95,7 @@ class Bottleneck(nn.Cell):
         fallback_on_stride = False
         self.with_modulated_dcn = False
         if self.with_dcn:
-
-            deformable_groups = dcn.get('deformable_groups', 1)
             from dcn import DeformConv2d
-            offset_channels = 18
-            self.conv2_offset = nn.Conv2d(planes, deformable_groups * offset_channels, stride=stride, kernel_size=3,
-                                          pad_mode="pad", padding=1, weight_init="ones")  # 获得每个位置上，deform卷积的偏移量
             self.conv2 = DeformConv2d(planes, planes, kernel_size=3, padding=1, stride=stride)
 
         else:
@@ -135,13 +124,7 @@ class Bottleneck(nn.Cell):
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
-
-        if self.with_dcn:
-            offset = self.conv2_offset(out)
-
-            out = self.conv2(out, offset)
-        else:
-            out = self.conv2(out)
+        out = self.conv2(out)
         out = self.bn2(out)
         out = self.relu(out)
 
@@ -150,7 +133,7 @@ class Bottleneck(nn.Cell):
 
         if self.downsample is not None:
             residual = self.downsample(x)
-
+        
         out += residual
         out = self.relu(out)
 
@@ -212,7 +195,7 @@ class ResNet(nn.Cell):
         self.inplanes = planes * block.expansion
 
         for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes, dcn))
+            layers.append(block(self.inplanes, planes, stride=1, dcn=dcn))
 
         return nn.SequentialCell(*layers)
 
@@ -303,12 +286,36 @@ def test_conv():
     ones = ops.Ones()
 
     data = ones((1, 64, 184, 320), ms.float32)
+    
+    print("原尺寸：{}".format(data.shape))
 
-    conv = conv3x3(64, 64)
+    conv = nn.Conv2d(64, 64, kernel_size=3, stride=1, pad_mode="pad",
+                     padding=1, weight_init="ones")
 
     output = conv(data)
+    
+    print("卷积后尺寸：{}".format(output.shape))
 
     print(output[0][0][1][:100])
+
+def test_dcn():
+    
+    ones = ops.Ones()
+
+    data = ones((1, 64, 184, 320), ms.float32)
+    
+    print("原尺寸：{}".format(data.shape))
+
+    from dcn import DeformConv2d
+
+    conv = DeformConv2d(64, 64, kernel_size=3, padding=1, stride=1)
+
+    output = conv(data)
+    
+    print("卷积后尺寸：{}".format(output.shape))
+
+    print(output[0][0][1][:100])
+    
 
 
 def test_bn():
@@ -341,10 +348,11 @@ def test_basicblock():
     print("test BasicBlock output ", output[0][3][3][:100])
 
 
-def test_resnet18():
-    data = np.load("test.npy")
+def test_deformable_resnet18():
+    data = np.load("/old/wlh/DBnetpp_mindspore/dbnet/test.npy")
 
-    resnet = ResNet(BasicBlock, [2, 2, 2, 2])
+    print("原图大小为：{}".format(data.shape))
+    resnet = ResNet(BasicBlock, [2, 2, 2, 2], dcn={'deformable_groups': 1})
 
     inp_tensor = Tensor(data, dtype=ms.float32)
 
@@ -353,9 +361,36 @@ def test_resnet18():
     for t in output:
         print(t.shape)
 
+
+def test_resnet18():
+    data = np.load("/old/wlh/DBnetpp_mindspore/dbnet/test.npy")
+
+    print("原图大小为：{}".format(data.shape))
+    resnet = ResNet(BasicBlock, [2, 2, 2, 2])
+
+    inp_tensor = Tensor(data, dtype=ms.float32)
+
+    output = resnet(inp_tensor)
+
+    for t in output:
+        print(t.shape)
+    print(output[0][0][0][1][:100])
+    
+def test_resnet50():
+    data = np.load("/old/wlh/DBnetpp_mindspore/dbnet/test.npy")
+
+    print("原图大小为：{}".format(data.shape))
+    resnet = ResNet(Bottleneck, [3, 4, 6, 3])
+
+    inp_tensor = Tensor(data, dtype=ms.float32)
+
+    output = resnet(inp_tensor)
+
+    for t in output:
+        print(t.shape)
     print(output[0][0][0][1][:100])
 
 
 if __name__ == "__main__":
-    context.set_context(device_id=0, mode=context.GRAPH_MODE)
-    test_resnet18()
+    context.set_context(device_id=3, mode=context.GRAPH_MODE)
+    test_resnet50()

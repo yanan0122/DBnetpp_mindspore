@@ -14,8 +14,6 @@ import torch
 import sys
 
 
-##
-
 class SegDetector(nn.Cell):
 
     def __init__(self,
@@ -155,7 +153,7 @@ class SegDetector(nn.Cell):
         concat = ops.Concat(1)
         fuse = concat((p5, p4, p3, p2))  # size:1/4.plane:1024
 
-        # this is the pred module, not binarization module; 
+        # this is the pred module, not binarization module;
         # We do not correct the name due to the trained model.
         binary = self.binarize(fuse)
 
