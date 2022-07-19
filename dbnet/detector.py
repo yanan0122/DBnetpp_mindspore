@@ -22,6 +22,8 @@ class SegDetector(nn.Cell):
                  bias=False, adaptive=True, smooth=False, serial=False, training=False,
                  *args, **kwargs):
         '''
+        in_channels:resnet18=[64, 128, 256, 512]
+                    resnet50=[2048,1024,512,256]
         bias: Whether conv layers have bias or not.
         adaptive: Whether to use adaptive threshold training or not.
         smooth: If true, use bilinear instead of deconv.
@@ -197,4 +199,4 @@ if __name__ == "__main__":
     segdetector = SegDetector(adaptive=True, training=True)
     output = segdetector([c2, c3, c4, c5])
 
-    print("segdetector output ", output)
+    print("segdetector output ", output['thresh_binary'].shape)

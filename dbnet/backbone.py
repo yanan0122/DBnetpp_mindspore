@@ -58,19 +58,19 @@ class BasicBlock(nn.Cell):
         residual = x
         # print("进入block")
         # print(x.shape)
-        
+
         out = self.conv1(x)
         # print("conv1 ",out[0][0][0][:5])
-        
+
         out = self.bn1(out)
         # print("bn1 ",out[0][0][0][:5])
-        
+
         out = self.relu(out)
         # print("relu1 ",out[0][0][0][:5])
-        
+
         out = self.conv2(out)
         # print("conv2 ",out[0][0][0][:5])
-        
+
         out = self.bn2(out)
         # print("bn2 ",out[0][0][0][:5])
 
@@ -127,7 +127,6 @@ class Bottleneck(nn.Cell):
     def construct(self, x):
         # print("进入bottleneck")
         residual = x
-        
         # print("x.shape:{}".format(x.shape))
         out = self.conv1(x)
         out = self.bn1(out)
@@ -141,7 +140,7 @@ class Bottleneck(nn.Cell):
 
         if self.downsample is not None:
             residual = self.downsample(x)
-        
+
         out += residual
         out = self.relu(out)
 
@@ -354,7 +353,27 @@ def test_basicblock():
 
     print(output.shape)
     print("test BasicBlock output ", output[0][3][3][:100])
-    
+
+def test_Bottleneck():
+    block = Bottleneck(inplanes=64, planes=64)
+
+    # np.random.seed(0)
+    # data = np.random.rand(1,64,184,320)
+
+    ones = ops.Ones()
+
+    data = ones((1, 64, 256, 256), ms.float32)
+
+    # print("test BasicBlock input ", data[0][0][0][:100])
+
+    inp_tensor = Tensor(data, dtype=ms.float32)
+
+    output = block(inp_tensor)
+
+    print(output.shape)
+    print("test Bottleneck output ", output[0][3][3][:100])
+
+
 def test_Bottleneck():
     block = Bottleneck(inplanes=64, planes=64)
 
@@ -417,7 +436,22 @@ def test_resnet50():
     for t in output:
         print(t.shape)
     print(output[0][0][0][1][:100])
-    
+
+
+def test_deformative_resnet50():
+    data = np.load("/old/wlh/DBnetpp_mindspore/dbnet/test.npy")
+
+    print("原图大小为：{}".format(data.shape))
+    resnet = ResNet(Bottleneck, [3, 4, 6, 3], dcn={'deformable_groups': 1})
+
+    inp_tensor = Tensor(data, dtype=ms.float32)
+
+    output = resnet(inp_tensor)
+
+    for t in output:
+        print(t.shape)
+    print(output[0][0][0][1][:100])
+
 
 def test_deformative_resnet50():
     data = np.load("/old/wlh/DBnetpp_mindspore/dbnet/test.npy")
@@ -436,4 +470,4 @@ def test_deformative_resnet50():
 
 if __name__ == "__main__":
     context.set_context(device_id=2, mode=context.GRAPH_MODE)
-    test_deformative_resnet50()
+    test_resnet50()
