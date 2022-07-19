@@ -2,12 +2,13 @@
 Deformable Convolution operator V2
 """
 import os
-import mindspore as ms
 import numpy as np
 
+import mindspore as ms
+import mindspore.common.dtype as mstype
 import mindspore.nn as nn
 import mindspore.ops as ops
-import mindspore.common.dtype as mstype
+
 np.random.seed(0)
 ms.common.set_seed(0)
 

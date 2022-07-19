@@ -1,13 +1,10 @@
 import time
-import numpy as np
-import mindspore as ms
-import mindspore.nn as nn
-from mindspore import ParameterTuple, Tensor
+
 from mindspore.train.callback import Callback
+import mindspore.nn as nn
 
 import backbone
 import detector
-import loss
 
 
 class DBnet(nn.Cell):

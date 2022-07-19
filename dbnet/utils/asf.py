@@ -1,8 +1,9 @@
+from mindspore import Tensor, context
 import mindspore.nn as nn
 import mindspore.ops as ops
 
-from mindspore import Tensor, context
 context.set_context(device_id=5, mode=context.GRAPH_MODE)
+
 
 class SpatialAttention(nn.Cell):
     def __init__(self, inner_channels, N):

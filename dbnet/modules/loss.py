@@ -1,8 +1,7 @@
-import sys
-import mindspore.numpy as mnp
-import numpy as np 
+import numpy as np
+
+from mindspore import Tensor, context, nn, ops
 import mindspore as ms
-from mindspore import Tensor,nn,ops,context
 
 # Input:
 #             pred: A dict which contains predictions.
@@ -41,13 +40,13 @@ class L1BalanceCELoss(nn.Cell):
         if 'thresh' in pred:
 
             l1_loss = self.l1_loss(pred['thresh'], thresh_map, thresh_mask)
-            
+
             dice_loss = self.dice_loss(pred['thresh_binary'], gt, gt_mask)
 
             loss = dice_loss + self.l1_scale * l1_loss + bce_loss_output * self.bce_scale
 
         else:
-            
+
             loss = bce_loss_output
 
         return loss
@@ -72,7 +71,7 @@ class DiceLoss(nn.Cell):
         intersection = (pred * gt * mask).sum()
         union = (pred * mask).sum() + (gt * mask).sum() + self.eps
         loss = 1 - 2.0 * intersection / union
-        
+
         return loss
 
 class MaskL1Loss(nn.Cell):
@@ -173,5 +172,3 @@ if __name__ == "__main__":
 
     # l1balanceloss = L1BalanceCELoss()
     # print(l1balanceloss.construct(pred_dict, gt, gt_mask, thresh_map, thresh_mask))
-
-

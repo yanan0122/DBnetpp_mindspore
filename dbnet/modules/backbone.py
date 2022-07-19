@@ -1,7 +1,8 @@
 # coding:utf-8
 import sys
+from utils.dcn import DeformConv2d
 
-import mindspore
+
 import mindspore as ms
 from mindspore import ops, Tensor
 from mindspore import context, set_seed
@@ -41,7 +42,6 @@ class BasicBlock(nn.Cell):
         if self.with_dcn:
 
             deformable_groups = dcn.get('deformable_groups', 1)
-            from dcn import DeformConv2d
 
             self.conv2 = DeformConv2d(planes, planes, kernel_size=3, padding=1, stride=1)
 
@@ -101,7 +101,6 @@ class Bottleneck(nn.Cell):
         fallback_on_stride = False
         self.with_modulated_dcn = False
         if self.with_dcn:
-            from dcn import DeformConv2d
             self.conv2 = DeformConv2d(planes, planes, kernel_size=3, padding=1)
 
         else:
@@ -313,8 +312,6 @@ def test_dcn():
     data = ones((1, 64, 184, 320), ms.float32)
 
     print("原尺寸：{}".format(data.shape))
-
-    from dcn import DeformConv2d
 
     conv = DeformConv2d(64, 64, kernel_size=3, padding=1, stride=1)
 

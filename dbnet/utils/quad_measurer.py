@@ -1,8 +1,7 @@
-import numpy as np
-
-from model import AverageMeter
 from collections import namedtuple
+
 import numpy as np
+from modules.model import AverageMeter
 from shapely.geometry import Polygon
 
 
