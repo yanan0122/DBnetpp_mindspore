@@ -19,54 +19,54 @@ import detector
 import loss
 from model import DBnet, WithLossCell, LossCallBack
 
-def learning_rate_function(lr, cur_epoch_num):
 
+def learning_rate_function(lr, cur_epoch_num):
     lr = 0.007
     epochs = 1200
     factor = 0.9
 
     rate = np.power(1.0 - cur_epoch_num / float(epochs + 1), factor)
 
-    return rate*lr
+    return rate * lr
+
 
 def train():
+    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=5)
 
-	context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=5)
+    stream = open('/home/group1/wjf_dbnet/dbnet_ms/dbnet/config.yaml', 'r', encoding='utf-8')
+    config = yaml.load(stream, Loader=yaml.FullLoader)
+    stream.close()
 
-	stream = open('config.yaml', 'r', encoding='utf-8')
-	config = yaml.load(stream, Loader=yaml.FullLoader)
-	stream.close()
+    data_loader = DataLoader(config)
 
-	data_loader = DataLoader(config)
+    train_dataset = ds.GeneratorDataset(data_loader, ['img', 'gts', 'gt_masks', 'thresh_maps', 'thresh_masks'])
 
-	train_dataset = ds.GeneratorDataset(data_loader, ['img', 'gts', 'gt_masks', 'thresh_maps', 'thresh_masks'])
+    train_dataset = train_dataset.batch(config['train']['batch_size'])  # default batch size 16. dataset size 63
 
-	train_dataset = train_dataset.batch(config['train']['batch_size']) # default batch size 16. dataset size 63
+    network = DBnet()
 
-	network = DBnet()
-	network.set_train()
+    # pretrained_weights = load_checkpoint(config['train']['resume'])
 
-	pretrained_weights = load_checkpoint(config['train']['resume'])
+    # load_param_into_net(network, pretrained_weights)
 
-	load_param_into_net(network, pretrained_weights)
+    opt = nn.SGD(params=network.trainable_params(), learning_rate=0.007, momentum=0.9, weight_decay=5e-4)
 
-	opt = nn.SGD(params=network.trainable_params(), learning_rate=0.007, momentum=0.9, weight_decay=5e-4)
+    criterion = loss.L1BalanceCELoss()
 
-	criterion = loss.L1BalanceCELoss()
+    network_with_loss = WithLossCell(network, criterion)
 
-	network_with_loss = WithLossCell(network, criterion)
+    model = Model(network_with_loss, optimizer=opt)
 
-	model = Model(network_with_loss, optimizer=opt)
+    loss_cb = LossMonitor()
 
-	loss_cb = LossMonitor()
+    model.train(config['train']['n_epoch'], train_dataset, dataset_sink_mode=False,
+                callbacks=[loss_cb, LearningRateScheduler(learning_rate_function)])
 
-	model.train(config['train']['n_epoch'], train_dataset, dataset_sink_mode=False, callbacks=[loss_cb, LearningRateScheduler(learning_rate_function)])
+    print("train complete")
 
-	print("train complete")
 
 if __name__ == '__main__':
-
-	train()
+    train()
 
 # def feed(train_dataset):
 # 	# debug function
@@ -80,12 +80,12 @@ if __name__ == '__main__':
 # 		np.save("/opt/nvme1n1/wz/dbnet_torch/thresh_maps.npy", thresh_maps)
 # 		np.save("/opt/nvme1n1/wz/dbnet_torch/thresh_masks.npy", thresh_masks)
 
-		# img = Tensor(img, dtype=ms.float32)
-		# gts = Tensor(gts, dtype=ms.float32)
-		# gt_masks = Tensor(gt_masks, dtype=ms.float32)
-		# thresh_masks = Tensor(thresh_masks, dtype=ms.float32)
-		# thresh_maps = Tensor(thresh_maps, dtype=ms.float32)
+# img = Tensor(img, dtype=ms.float32)
+# gts = Tensor(gts, dtype=ms.float32)
+# gt_masks = Tensor(gt_masks, dtype=ms.float32)
+# thresh_masks = Tensor(thresh_masks, dtype=ms.float32)
+# thresh_maps = Tensor(thresh_maps, dtype=ms.float32)
 
-		# output_data = network_with_loss(img, gts, gt_masks, thresh_maps, thresh_masks)
+# output_data = network_with_loss(img, gts, gt_masks, thresh_maps, thresh_masks)
 
-		# print(output_data)
+# print(output_data)

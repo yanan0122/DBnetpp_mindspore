@@ -461,4 +461,4 @@ def test_deformative_resnet50():
 
 if __name__ == "__main__":
     context.set_context(device_id=2, mode=context.GRAPH_MODE)
-    test_deformative_resnet50()
+    test_resnet50()
