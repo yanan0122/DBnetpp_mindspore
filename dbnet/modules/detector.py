@@ -1,26 +1,20 @@
+import numpy as np
+
 import mindspore as ms
 from mindspore import ops, Tensor
 from mindspore import context
 import mindspore.nn as nn
-from mindspore.common.initializer import initializer, Normal, HeNormal, One
+from mindspore.common.initializer import HeNormal
 from mindspore.common import initializer as init
-from mindspore import load_checkpoint, load_param_into_net
 
-import numpy as np
-import math
-from collections import OrderedDict
-
-import torch
 import sys
+sys.path.insert(0, '..')
+from utils.asf import ASF
 
 
 class SegDetector(nn.Cell):
-
-    def __init__(self,
-                 in_channels=[64, 128, 256, 512],
-                 inner_channels=256, k=10,
-                 bias=False, adaptive=True, smooth=False, serial=False, training=False,
-                 *args, **kwargs):
+    def __init__(self, in_channels=[64, 128, 256, 512], inner_channels=256, k=10,
+                 bias=False, adaptive=True, smooth=False, serial=False, training=False):
         '''
         in_channels:resnet18=[64, 128, 256, 512]
                     resnet50=[2048,1024,512,256]
@@ -67,7 +61,7 @@ class SegDetector(nn.Cell):
 
         if adaptive:
             self.thresh = self._init_thresh(
-                inner_channels, serial=serial, smooth=smooth, bias=bias)
+                inner_channels, serial=serial, bias=bias)
             self.weights_init(self.thresh)
 
         self.weights_init(self.in5)
@@ -98,8 +92,7 @@ class SegDetector(nn.Cell):
                 m.gamma = init.initializer('ones', m.gamma.shape)
                 m.beta = init.initializer(1e-4, m.beta.shape)
 
-    def _init_thresh(self, inner_channels,
-                     serial=False, smooth=False, bias=False):
+    def _init_thresh(self, inner_channels, serial=False, bias=False):
 
         in_channels = inner_channels
 
@@ -120,7 +113,7 @@ class SegDetector(nn.Cell):
 
         return self.thresh
 
-    def construct(self, features, gt=None, masks=None, training=False):
+    def construct(self, features):
 
         # shapes for inference:
         # torch.Size([1, 64, 184, 320])
@@ -181,8 +174,68 @@ class SegDetector(nn.Cell):
         return reciprocal(1 + exp(-self.k * (x - y)))
 
 
+class SegDetectorPP(SegDetector):
+    def __init__(self, in_channels=[64, 128, 256, 512], inner_channels=256, k=10,
+                 bias=False, adaptive=True, smooth=False, serial=False, training=False):
+        super(SegDetectorPP, self).__init__(in_channels, inner_channels, k,
+                                            bias, adaptive, smooth, serial, training)
+        self.asf = ASF(inner_channels)
+        self.weights_init(self.asf)
+
+    def construct(self, features):
+
+        # shapes for inference:
+        # torch.Size([1, 64, 184, 320])
+        # torch.Size([1, 128, 92, 160])
+        # torch.Size([1, 256, 46, 80])
+        # torch.Size([1, 512, 23, 40])
+
+        c2, c3, c4, c5 = features
+
+        in5 = self.in5(c5)
+        in4 = self.in4(c4)
+        in3 = self.in3(c3)
+        in2 = self.in2(c2)
+
+        # 进行上采样，准备进行连接操作
+        up5 = ops.ResizeNearestNeighbor((in4.shape[2], in4.shape[2]))
+        up4 = ops.ResizeNearestNeighbor((in3.shape[2], in3.shape[2]))
+        up3 = ops.ResizeNearestNeighbor((in2.shape[2], in2.shape[2]))
+
+        out4 = up5(in5) + in4  # 1/16
+        out3 = up4(out4) + in3  # 1/8
+        out2 = up3(out3) + in2  # 1/4
+
+        upsample = ops.ResizeNearestNeighbor((c2.shape[2], c2.shape[3]))
+
+        # 将连接后的结果再进行上采样，使其形状相同，1/4
+        p5 = upsample(self.out5(in5))
+        p4 = upsample(self.out4(out4))
+        p3 = upsample(self.out3(out3))
+        p2 = upsample(self.out2(out2))
+
+        # Different from DBNet
+        fuse = self.asf((p5, p4, p3, p2))   # size:1/4.plane:1024
+
+        # this is the pred module, not binarization module;
+        # We do not correct the name due to the trained model.
+        binary = self.binarize(fuse)
+
+        pred = {}
+
+        pred['binary'] = binary
+
+        if self.adaptive and self.training:
+            thresh = self.thresh(fuse)
+
+            pred['thresh'] = thresh
+            pred['thresh_binary'] = self.step_function(binary, thresh)
+
+        return pred
+
+
 if __name__ == "__main__":
-    context.set_context(device_id=5, mode=context.PYNATIVE_MODE)
+    context.set_context(device_id=5, mode=context.GRAPH_MODE)
 
     print("segdetector ms test")
 
@@ -196,7 +249,7 @@ if __name__ == "__main__":
     c4 = Tensor(c4, dtype=ms.float32)
     c5 = Tensor(c5, dtype=ms.float32)
 
-    segdetector = SegDetector(adaptive=True, training=True)
+    segdetector = SegDetectorPP(adaptive=True, training=True)
     output = segdetector([c2, c3, c4, c5])
 
-    print("segdetector output ", output['thresh_binary'].shape)
+    print("segdetector output ", output[2].shape)   # 'thresh_binary'

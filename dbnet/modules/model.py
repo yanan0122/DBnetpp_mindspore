@@ -16,12 +16,13 @@ class DBnet(nn.Cell):
         self.segdetector = detector.SegDetector()
 
     def construct(self, img):
-        pred = self.segdetector(self.resnet(img))
+        pred = self.resnet(img)
+        pred = self.segdetector(pred)
 
         return pred
 
 
-class WithLossCell(nn.Cell):
+class DBNetWithLoss(nn.Cell):
     """
     Wrap the network with loss function to compute loss.
 
@@ -31,14 +32,13 @@ class WithLossCell(nn.Cell):
     """
 
     def __init__(self, backbone, loss_fn):
-        super(WithLossCell, self).__init__(auto_prefix=False)
+        super(DBNetWithLoss, self).__init__(auto_prefix=False)
 
         self._backbone = backbone
         self._loss_fn = loss_fn
 
     def construct(self, img, gt, gt_mask, thresh_map, thresh_mask):
         pred = self._backbone(img)
-
         loss = self._loss_fn(pred, gt, gt_mask, thresh_map, thresh_mask)
 
         return loss
@@ -52,6 +52,20 @@ class WithLossCell(nn.Cell):
             Cell, return backbone network.
         """
         return self._backbone
+
+
+class DBNetPP(nn.Cell):
+    def __init__(self):
+        super(DBNetPP, self).__init__(auto_prefix=False)
+
+        self.resnet = backbone.resnet18()
+        self.segdetector = detector.SegDetectorPP()
+
+    def construct(self, img):
+        pred = self.resnet(img)
+        pred = self.segdetector(pred)
+
+        return pred
 
 
 class LossCallBack(Callback):

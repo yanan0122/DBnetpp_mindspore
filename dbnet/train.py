@@ -17,7 +17,7 @@ from dataloader.load import DataLoader
 import DBnetpp_mindspore.dbnet.modules.backbone as backbone
 import DBnetpp_mindspore.dbnet.modules.detector as detector
 import DBnetpp_mindspore.dbnet.modules.loss as loss
-from DBnetpp_mindspore.dbnet.modules.model import DBnet, WithLossCell, LossCallBack
+from DBnetpp_mindspore.dbnet.modules.model import DBnet, DBNetWithLoss, LossCallBack
 
 
 def learning_rate_function(lr, cur_epoch_num):
@@ -53,7 +53,7 @@ def train():
 
     criterion = loss.L1BalanceCELoss()
 
-    network_with_loss = WithLossCell(network, criterion)
+    network_with_loss = DBNetWithLoss(network, criterion)
 
     model = Model(network_with_loss, optimizer=opt)
 
