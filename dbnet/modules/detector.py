@@ -8,8 +8,10 @@ from mindspore.common.initializer import HeNormal
 from mindspore.common import initializer as init
 
 import sys
-sys.path.insert(0, '..')
-from utils.asf import ASF
+# sys.path.insert(0, '..')
+
+sys.path.append(r"/home/group1/wjf_dbnet/dbnet/utils")
+from asf import ASF
 
 
 class SegDetector(nn.Cell):

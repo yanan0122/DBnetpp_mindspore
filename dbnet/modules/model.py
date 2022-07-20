@@ -1,14 +1,14 @@
 import time
-
+import numpy as np
 from mindspore.train.callback import Callback
 import mindspore.nn as nn
 import mindspore.dataset as ds
 
-import backbone
-import detector
-import loss
+import modules.backbone as backbone
+import modules.detector as detector
+import modules.loss as loss
 from SegDetectorRepresenter import SegDetectorRepresenter
-from quad_measurer import QuadMeasurer
+# from quad_measurer import QuadMeasurer
 import yaml
 from dataloader.load import DataLoader
 
@@ -18,7 +18,7 @@ class DBnet(nn.Cell):
     def __init__(self):
         super(DBnet, self).__init__()
 
-        self.resnet = backbone.resnet18()
+        self.resnet = backbone.deformable_resnet18()
         self.segdetector = detector.SegDetector()
 
     def construct(self, img):
@@ -28,9 +28,9 @@ class DBnet(nn.Cell):
         return pred
 
 
-class DBNetPP(nn.Cell):
+class DBnetPP(nn.Cell):
     def __init__(self):
-        super(DBNetPP, self).__init__(auto_prefix=False)
+        super(DBnetPP, self).__init__(auto_prefix=False)
 
         self.resnet = backbone.resnet18()
         self.segdetector = detector.SegDetectorPP()
@@ -121,7 +121,7 @@ class LossCallBack(Callback):
                 time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
                 cb_params.cur_epoch_num,
                 cur_step_in_epoch,
-                self.loss_avg.avg)
+                np.mean(self.loss_avg.avg))
             print(loss_log)
             loss_file = open("./loss.log", "a+")
             loss_file.write(loss_log)

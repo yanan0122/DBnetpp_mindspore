@@ -14,14 +14,10 @@ from mindspore.train.model import Model
 from mindspore import context, Tensor
 
 from dataloader.load import DataLoader
-import backbone
-import detector
-import loss
-from model import DBnet, WithLossCell, LossCallBack, LossCallBack_new
-import DBnetpp_mindspore.dbnet.modules.backbone as backbone
-import DBnetpp_mindspore.dbnet.modules.detector as detector
-import DBnetpp_mindspore.dbnet.modules.loss as loss
-from DBnetpp_mindspore.dbnet.modules.model import DBnet, WithLossCell, LossCallBack
+import modules.backbone as backbone
+import modules.detector as detector
+import modules.loss as loss
+from modules.model import DBnet, WithLossCell, LossCallBack, LossCallBack_new, DBnetPP
 
 
 def learning_rate_function(lr, cur_epoch_num):
@@ -64,7 +60,7 @@ def train():
     loss_cb = LossMonitor()
 
     model.train(config['train']['n_epoch'], train_dataset, dataset_sink_mode=False,
-                callbacks=[LossCallBack_new(), LearningRateScheduler(learning_rate_function)])
+                callbacks=[LossCallBack(), LearningRateScheduler(learning_rate_function)])
 
     print("train complete")
 
