@@ -1,8 +1,9 @@
 import sys
 import mindspore.numpy as mnp
-import numpy as np 
+import numpy as np
 import mindspore as ms
-from mindspore import Tensor,nn,ops,context
+from mindspore import Tensor, nn, ops, context
+
 
 # Input:
 #             pred: A dict which contains predictions.
@@ -41,16 +42,17 @@ class L1BalanceCELoss(nn.Cell):
         if 'thresh' in pred:
 
             l1_loss = self.l1_loss(pred['thresh'], thresh_map, thresh_mask)
-            
+
             dice_loss = self.dice_loss(pred['thresh_binary'], gt, gt_mask)
 
             loss = dice_loss + self.l1_scale * l1_loss + bce_loss_output * self.bce_scale
 
         else:
-            
+
             loss = bce_loss_output
 
         return loss
+
 
 class DiceLoss(nn.Cell):
 
@@ -72,22 +74,22 @@ class DiceLoss(nn.Cell):
         intersection = (pred * gt * mask).sum()
         union = (pred * mask).sum() + (gt * mask).sum() + self.eps
         loss = 1 - 2.0 * intersection / union
-        
+
         return loss
+
 
 class MaskL1Loss(nn.Cell):
 
     def __init__(self):
-
         super(MaskL1Loss, self).__init__()
 
     def construct(self, pred, gt, mask):
-
         mask_sum = mask.sum()
 
         loss = ((pred[:, 0] - gt).abs() * mask).sum() / mask_sum
 
         return loss
+
 
 class BalanceCrossEntropyLoss(nn.Cell):
     '''
@@ -101,7 +103,6 @@ class BalanceCrossEntropyLoss(nn.Cell):
     '''
 
     def __init__(self, negative_ratio=3.0, eps=1e-6):
-
         super(BalanceCrossEntropyLoss, self).__init__()
 
         self.negative_ratio = negative_ratio
@@ -111,7 +112,6 @@ class BalanceCrossEntropyLoss(nn.Cell):
         self.K = 100
 
     def construct(self, pred, gt, mask, return_origin=False):
-
         '''
         Args:
             pred: shape :math:`(N, 1, H, W)`, the prediction of network
@@ -124,7 +124,7 @@ class BalanceCrossEntropyLoss(nn.Cell):
 
         positive_count = pos.sum().astype(ms.int32)
         negative_count = min(neg.sum().astype(ms.int32),
-                            (positive_count * self.negative_ratio).astype(ms.int32))
+                             (positive_count * self.negative_ratio).astype(ms.int32))
 
         loss = self.bceloss(pred, gt)[:, 0, :, :]
 
@@ -144,12 +144,12 @@ class BalanceCrossEntropyLoss(nn.Cell):
 
         return loss
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=5)
 
-    pred = Tensor(np.load("/opt/nvme1n1/wz/dbnet_torch/pred.npy"),dtype=ms.float32)
-    gt = Tensor(np.load("/opt/nvme1n1/wz/dbnet_torch/gt.npy"),dtype=ms.float32)
+    pred = Tensor(np.load("/opt/nvme1n1/wz/dbnet_torch/pred.npy"), dtype=ms.float32)
+    gt = Tensor(np.load("/opt/nvme1n1/wz/dbnet_torch/gt.npy"), dtype=ms.float32)
     gt_mask = Tensor(np.load("/opt/nvme1n1/wz/dbnet_torch/mask.npy"), dtype=ms.float32)
 
     print(pred.shape, gt.shape, gt_mask.shape)
@@ -164,8 +164,7 @@ if __name__ == "__main__":
     # print(maskl1loss.construct(pred,gt,mask))
 
     balance_loss = BalanceCrossEntropyLoss()
-    print(balance_loss.construct(pred,gt,gt_mask,False))
-
+    print(balance_loss.construct(pred, gt, gt_mask, False))
 
     # pred_dict = {}
     # pred_dict['binary'] = pred
@@ -173,5 +172,3 @@ if __name__ == "__main__":
 
     # l1balanceloss = L1BalanceCELoss()
     # print(l1balanceloss.construct(pred_dict, gt, gt_mask, thresh_map, thresh_mask))
-
-

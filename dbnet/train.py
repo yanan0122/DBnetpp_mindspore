@@ -17,7 +17,7 @@ from dataloader.load import DataLoader
 import backbone
 import detector
 import loss
-from model import DBnet, WithLossCell, LossCallBack
+from model import DBnet, WithLossCell, LossCallBack, LossCallBack_new
 
 
 def learning_rate_function(lr, cur_epoch_num):
@@ -37,7 +37,7 @@ def train():
     config = yaml.load(stream, Loader=yaml.FullLoader)
     stream.close()
 
-    data_loader = DataLoader(config)
+    data_loader = DataLoader(config, func="train")
 
     train_dataset = ds.GeneratorDataset(data_loader, ['img', 'gts', 'gt_masks', 'thresh_maps', 'thresh_masks'])
 
@@ -60,7 +60,7 @@ def train():
     loss_cb = LossMonitor()
 
     model.train(config['train']['n_epoch'], train_dataset, dataset_sink_mode=False,
-                callbacks=[loss_cb, LearningRateScheduler(learning_rate_function)])
+                callbacks=[LossCallBack_new(), LearningRateScheduler(learning_rate_function)])
 
     print("train complete")
 

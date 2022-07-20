@@ -1,9 +1,27 @@
 import numpy as np
 
-from model import AverageMeter
 from collections import namedtuple
 import numpy as np
 from shapely.geometry import Polygon
+
+
+class AverageMeter():
+    """Computes and stores the average and current value"""
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
 
 
 class DetectionIoUEvaluator(object):
@@ -194,7 +212,7 @@ class DetectionIoUEvaluator(object):
             matchedSum) / numGlobalCareDet
         methodHmean = 0 if methodRecall + methodPrecision == 0 else 2 * \
                                                                     methodRecall * methodPrecision / (
-                                                                                methodRecall + methodPrecision)
+                                                                            methodRecall + methodPrecision)
 
         methodMetrics = {'precision': methodPrecision,
                          'recall': methodRecall, 'hmean': methodHmean}
@@ -203,7 +221,7 @@ class DetectionIoUEvaluator(object):
 
 
 class QuadMeasurer():
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.evaluator = DetectionIoUEvaluator()
 
     def measure(self, batch, output, is_output_polygon=False, box_thresh=0.6):

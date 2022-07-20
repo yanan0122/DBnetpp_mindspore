@@ -14,49 +14,58 @@ from dataloader.random_thansform import Random_Augment
 from dataloader.MakeSegMap import MakeSegDetectionData
 from dataloader.MakeBorderMap import MakeBorderMap
 
+
 def get_img(img_path):
     img = cv2.imread(img_path)
     return img
 
-def get_bboxes(gt_path,config):
-    with open(gt_path,'r',encoding='utf-8') as fid:
+
+def get_bboxes(gt_path, config):
+    with open(gt_path, 'r', encoding='utf-8') as fid:
         lines = fid.readlines()
     polys = []
     tags = []
     for line in lines:
-        line = line.replace('\ufeff','').replace( '\xef\xbb\xbf','')
+        line = line.replace('\ufeff', '').replace('\xef\xbb\xbf', '')
         gt = line.split(',')
         if "#" in gt[-1]:
             tags.append(True)
         else:
             tags.append(False)
-        if(config['train']['is_icdar2015']):
+        if (config['train']['is_icdar2015']):
             box = [int(gt[i]) for i in range(8)]
         else:
-            box = [int(gt[i]) for i in range(len(gt)-1)]
+            box = [int(gt[i]) for i in range(len(gt) - 1)]
         polys.append(box)
     return np.array(polys), tags
 
+
 class DataLoader():
-    
-    def __init__(self, config):
+
+    def __init__(self, config, func="train"):
 
         self.config = config
         self.ra = Random_Augment()
         self.ms = MakeSegDetectionData()
         self.mb = MakeBorderMap()
-
-        img_paths = glob.glob(os.path.join(config['train']['train_img_dir'],'*'+config['train']['train_img_format']))
+        if func == "train":
+            img_paths = glob.glob(os.path.join(config['train']['train_img_dir'], '*' + config['train']['train_img_format']))
+        else:
+            img_paths = glob.glob(
+                os.path.join(config['train']['val_img_dir'], '*' + config['train']['train_img_format']))
         gt_paths = []
-
         for img_path in img_paths:
 
             im_name = img_path.split('/')[-1].split('.')[0]
-            if(config['train']['is_icdar2015']):
-                gt_file_name = im_name+'.jpg.txt'
+            if config['train']['is_icdar2015']:
+                gt_file_name = im_name + '.jpg.txt'
             else:
                 gt_file_name = im_name + '.txt'
-            gt_paths.append(os.path.join(config['train']['train_gt_dir'],gt_file_name))
+            if func == "train":
+                gt_paths.append(os.path.join(config['train']['train_gt_dir'], gt_file_name))
+            else:
+                gt_paths.append(os.path.join(config['train']['val_gt_dir'], gt_file_name))
+
 
         self.img_paths = img_paths
         self.gt_paths = gt_paths
@@ -70,7 +79,7 @@ class DataLoader():
         gt_path = self.gt_paths[index]
 
         img = get_img(img_path)
-        polys, dontcare = get_bboxes(gt_path,self.config)
+        polys, dontcare = get_bboxes(gt_path, self.config)
 
         if self.config['train']['is_transform']:
             img, polys = self.ra.random_scale(img, polys, 640)
@@ -82,11 +91,11 @@ class DataLoader():
         img, thresh_map, thresh_mask = self.mb.process(img, polys, dontcare)
 
         if self.config['train']['is_show']:
-            cv2.imwrite('img.jpg',img)
-            cv2.imwrite('gt.jpg',gt[0]*255)
-            cv2.imwrite('gt_mask.jpg',gt_mask[0]*255)
-            cv2.imwrite('thresh_map.jpg',thresh_map*255)
-            cv2.imwrite('thresh_mask.jpg',thresh_mask*255)
+            cv2.imwrite('img.jpg', img)
+            cv2.imwrite('gt.jpg', gt[0] * 255)
+            cv2.imwrite('gt_mask.jpg', gt_mask[0] * 255)
+            cv2.imwrite('thresh_map.jpg', thresh_map * 255)
+            cv2.imwrite('thresh_mask.jpg', thresh_mask * 255)
 
         if self.config['train']['is_transform']:
             img = Image.fromarray(img)
@@ -106,10 +115,9 @@ class DataLoader():
 
         return img, gt, gt_mask, thresh_map, thresh_mask
 
+
 if __name__ == '__main__':
-    
-    stream = open('config.yaml', 'r', encoding='utf-8')
-    config = yaml.load(stream,Loader=yaml.FullLoader)
+    stream = open('/home/group1/wjf_dbnet/dbnet_ms/dbnet/config.yaml', 'r', encoding='utf-8')
+    config = yaml.load(stream, Loader=yaml.FullLoader)
     data_loader = DataLoader(config)
     stream.close()
-
