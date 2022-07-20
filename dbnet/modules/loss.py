@@ -1,9 +1,11 @@
 import sys
 import mindspore.numpy as mnp
 import numpy as np
+import numpy as np
+
+from mindspore import Tensor, context, nn, ops
 import mindspore as ms
 from mindspore import Tensor, nn, ops, context
-
 
 # Input:
 #             pred: A dict which contains predictions.
@@ -81,9 +83,11 @@ class DiceLoss(nn.Cell):
 class MaskL1Loss(nn.Cell):
 
     def __init__(self):
+
         super(MaskL1Loss, self).__init__()
 
     def construct(self, pred, gt, mask):
+
         mask_sum = mask.sum()
 
         loss = ((pred[:, 0] - gt).abs() * mask).sum() / mask_sum
@@ -103,6 +107,7 @@ class BalanceCrossEntropyLoss(nn.Cell):
     '''
 
     def __init__(self, negative_ratio=3.0, eps=1e-6):
+
         super(BalanceCrossEntropyLoss, self).__init__()
 
         self.negative_ratio = negative_ratio
@@ -112,6 +117,7 @@ class BalanceCrossEntropyLoss(nn.Cell):
         self.K = 100
 
     def construct(self, pred, gt, mask, return_origin=False):
+
         '''
         Args:
             pred: shape :math:`(N, 1, H, W)`, the prediction of network
@@ -124,7 +130,7 @@ class BalanceCrossEntropyLoss(nn.Cell):
 
         positive_count = pos.sum().astype(ms.int32)
         negative_count = min(neg.sum().astype(ms.int32),
-                             (positive_count * self.negative_ratio).astype(ms.int32))
+                            (positive_count * self.negative_ratio).astype(ms.int32))
 
         loss = self.bceloss(pred, gt)[:, 0, :, :]
 
@@ -143,7 +149,6 @@ class BalanceCrossEntropyLoss(nn.Cell):
         # return balance_loss
 
         return loss
-
 
 if __name__ == "__main__":
     context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=5)
@@ -166,9 +171,12 @@ if __name__ == "__main__":
     balance_loss = BalanceCrossEntropyLoss()
     print(balance_loss.construct(pred, gt, gt_mask, False))
 
+
     # pred_dict = {}
     # pred_dict['binary'] = pred
     # pred_dict['thresh'] = pred
 
     # l1balanceloss = L1BalanceCELoss()
     # print(l1balanceloss.construct(pred_dict, gt, gt_mask, thresh_map, thresh_mask))
+
+

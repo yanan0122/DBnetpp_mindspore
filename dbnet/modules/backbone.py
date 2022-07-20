@@ -1,7 +1,8 @@
 # coding:utf-8
 import sys
+from utils.dcn import DeformConv2d
 
-import mindspore
+
 import mindspore as ms
 from mindspore import ops, Tensor
 from mindspore import context, set_seed
@@ -41,7 +42,6 @@ class BasicBlock(nn.Cell):
         if self.with_dcn:
 
             deformable_groups = dcn.get('deformable_groups', 1)
-            from dcn import DeformConv2d
 
             self.conv2 = DeformConv2d(planes, planes, kernel_size=3, padding=1, stride=1)
 
@@ -101,7 +101,6 @@ class Bottleneck(nn.Cell):
         fallback_on_stride = False
         self.with_modulated_dcn = False
         if self.with_dcn:
-            from dcn import DeformConv2d
             self.conv2 = DeformConv2d(planes, planes, kernel_size=3, padding=1)
 
         else:
@@ -127,7 +126,6 @@ class Bottleneck(nn.Cell):
     def construct(self, x):
         # print("进入bottleneck")
         residual = x
-
         # print("x.shape:{}".format(x.shape))
         out = self.conv1(x)
         out = self.bn1(out)
@@ -307,27 +305,6 @@ def test_conv():
 
     print(output[0][0][1][:100])
 
-def test_dcn():
-
-    ones = ops.Ones()
-
-    data = ones((1, 64, 184, 320), ms.float32)
-
-    print("原尺寸：{}".format(data.shape))
-
-    from dcn import DeformConv2d
-
-    print("原尺寸：{}".format(data.shape))
-
-    conv = nn.Conv2d(64, 64, kernel_size=3, stride=1, pad_mode="pad",
-                     padding=1, weight_init="ones")
-
-    output = conv(data)
-
-    print("卷积后尺寸：{}".format(output.shape))
-
-    print(output[0][0][1][:100])
-
 
 def test_dcn():
     ones = ops.Ones()
@@ -335,8 +312,6 @@ def test_dcn():
     data = ones((1, 64, 184, 320), ms.float32)
 
     print("原尺寸：{}".format(data.shape))
-
-    from dcn import DeformConv2d
 
     conv = DeformConv2d(64, 64, kernel_size=3, padding=1, stride=1)
 
@@ -344,10 +319,7 @@ def test_dcn():
 
     print("卷积后尺寸：{}".format(output.shape))
 
-    print("卷积后尺寸：{}".format(output.shape))
-
     print(output[0][0][1][:100])
-
 
 
 def test_bn():
@@ -378,6 +350,25 @@ def test_basicblock():
 
     print(output.shape)
     print("test BasicBlock output ", output[0][3][3][:100])
+
+def test_Bottleneck():
+    block = Bottleneck(inplanes=64, planes=64)
+
+    # np.random.seed(0)
+    # data = np.random.rand(1,64,184,320)
+
+    ones = ops.Ones()
+
+    data = ones((1, 64, 256, 256), ms.float32)
+
+    # print("test BasicBlock input ", data[0][0][0][:100])
+
+    inp_tensor = Tensor(data, dtype=ms.float32)
+
+    output = block(inp_tensor)
+
+    print(output.shape)
+    print("test Bottleneck output ", output[0][3][3][:100])
 
 
 def test_Bottleneck():
@@ -434,6 +425,21 @@ def test_resnet50():
 
     print("原图大小为：{}".format(data.shape))
     resnet = ResNet(Bottleneck, [3, 4, 6, 3])
+
+    inp_tensor = Tensor(data, dtype=ms.float32)
+
+    output = resnet(inp_tensor)
+
+    for t in output:
+        print(t.shape)
+    print(output[0][0][0][1][:100])
+
+
+def test_deformative_resnet50():
+    data = np.load("/old/wlh/DBnetpp_mindspore/dbnet/test.npy")
+
+    print("原图大小为：{}".format(data.shape))
+    resnet = ResNet(Bottleneck, [3, 4, 6, 3], dcn={'deformable_groups': 1})
 
     inp_tensor = Tensor(data, dtype=ms.float32)
 

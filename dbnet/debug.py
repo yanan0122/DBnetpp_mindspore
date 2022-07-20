@@ -3,7 +3,7 @@ import sys
 
 import mindspore
 import mindspore as ms
-from mindspore import ops,Tensor    
+from mindspore import ops,Tensor
 from mindspore import context
 from mindspore.common.initializer import initializer, Normal
 from mindspore import load_checkpoint, load_param_into_net
@@ -41,7 +41,7 @@ def test_upsample():
 
     out_torch = up_torch(inp_torch).numpy()
     out_ms = up_ms(inp_ms).asnumpy()
- 
+
     print(np.abs(out_ms-out_torch))
 
     # print(out_torch.shape)
@@ -62,7 +62,7 @@ def test_bn():
 
     out_torch = bn_torch(inp_torch).detach().numpy()
     out_ms = bn_ms(inp_ms).asnumpy()
- 
+
     # print(out_torch.shape, out_torch[0][10][10][:5])
     # print(out_ms.shape, out_ms[0][10][10][:5])
 
@@ -91,7 +91,7 @@ def test_conv():
 
     out_torch = conv_torch(inp_torch).detach().numpy()
     out_ms = conv_ms(inp_ms).asnumpy()
- 
+
     # print(out_torch.shape, out_torch[0][10][10][:5])
     # print(out_ms.shape, out_ms[0][10][10][:5])
 

@@ -1,9 +1,7 @@
 import time
-import numpy as np
-import mindspore as ms
-import mindspore.nn as nn
-from mindspore import ParameterTuple, Tensor
+
 from mindspore.train.callback import Callback
+import mindspore.nn as nn
 import mindspore.dataset as ds
 
 import backbone
@@ -24,7 +22,22 @@ class DBnet(nn.Cell):
         self.segdetector = detector.SegDetector()
 
     def construct(self, img):
-        pred = self.segdetector(self.resnet(img))
+        pred = self.resnet(img)
+        pred = self.segdetector(pred)
+
+        return pred
+
+
+class DBNetPP(nn.Cell):
+    def __init__(self):
+        super(DBNetPP, self).__init__(auto_prefix=False)
+
+        self.resnet = backbone.resnet18()
+        self.segdetector = detector.SegDetectorPP()
+
+    def construct(self, img):
+        pred = self.resnet(img)
+        pred = self.segdetector(pred)
 
         return pred
 

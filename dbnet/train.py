@@ -18,6 +18,10 @@ import backbone
 import detector
 import loss
 from model import DBnet, WithLossCell, LossCallBack, LossCallBack_new
+import DBnetpp_mindspore.dbnet.modules.backbone as backbone
+import DBnetpp_mindspore.dbnet.modules.detector as detector
+import DBnetpp_mindspore.dbnet.modules.loss as loss
+from DBnetpp_mindspore.dbnet.modules.model import DBnet, WithLossCell, LossCallBack
 
 
 def learning_rate_function(lr, cur_epoch_num):

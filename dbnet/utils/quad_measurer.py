@@ -1,7 +1,9 @@
 import numpy as np
 
 from collections import namedtuple
+
 import numpy as np
+from modules.model import AverageMeter
 from shapely.geometry import Polygon
 
 
@@ -221,7 +223,7 @@ class DetectionIoUEvaluator(object):
 
 
 class QuadMeasurer():
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.evaluator = DetectionIoUEvaluator()
 
     def measure(self, batch, output, is_output_polygon=False, box_thresh=0.6):
