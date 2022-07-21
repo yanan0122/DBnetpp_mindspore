@@ -33,6 +33,11 @@ train:
       decay_method: 'e_decay'  # e_decay: 指数衰减, s_decay: 指定epoch衰减
       schedule: [500,800,1000]
       gama: 0.1
+      polygon: True
+      box_thresh: 0.7
+      thresh: 0.3,
+      max_candidates: 100,
+      dest: 'binary'
 test:
       gpu_id: '0'
       pretrained: False

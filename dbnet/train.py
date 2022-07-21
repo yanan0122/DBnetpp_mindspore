@@ -35,7 +35,8 @@ def train():
     config = yaml.load(stream, Loader=yaml.FullLoader)
     stream.close()
 
-    data_loader = DataLoader(config)
+    data_loader = DataLoader(config, func="train")
+
     train_dataset = ds.GeneratorDataset(data_loader, ['img', 'gts', 'gt_masks', 'thresh_maps', 'thresh_masks'])
     train_dataset = train_dataset.batch(config['train']['batch_size'])  # default batch size 16. dataset size 63
 

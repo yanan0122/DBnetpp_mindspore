@@ -1,7 +1,5 @@
 # coding:utf-8
-import sys
 from utils.dcn import DeformConv2d
-
 
 import mindspore as ms
 from mindspore import ops, Tensor
@@ -239,23 +237,22 @@ class ResNet(nn.Cell):
         return x2, x3, x4, x5
 
 
-def resnet18(pretrained=True, **kwargs):
-    ms_dict = load_checkpoint("/opt/nvme1n1/wz/dbnet_torch/path-to-model-directory/res18_ms.ckpt")
-
+def resnet18(pretrained=False, **kwargs):
     model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
 
     if pretrained:
+        ms_dict = load_checkpoint("/opt/nvme1n1/wz/dbnet_torch/path-to-model-directory/res18_ms.ckpt")
         param_not_load = load_param_into_net(model, ms_dict)
 
     return model
 
 
-def deformable_resnet18(pretrained=True, **kwargs):
-    ms_dict = load_checkpoint("")
+def deformable_resnet18(pretrained=False, **kwargs):
 
     model = ResNet(BasicBlock, [2, 2, 2, 2], dcn=dict(deformable_groups=1), **kwargs)
 
     if pretrained:
+        ms_dict = load_checkpoint("")
         param_not_load = load_param_into_net(model, ms_dict)
 
     return model
@@ -351,25 +348,6 @@ def test_basicblock():
     print(output.shape)
     print("test BasicBlock output ", output[0][3][3][:100])
 
-def test_Bottleneck():
-    block = Bottleneck(inplanes=64, planes=64)
-
-    # np.random.seed(0)
-    # data = np.random.rand(1,64,184,320)
-
-    ones = ops.Ones()
-
-    data = ones((1, 64, 256, 256), ms.float32)
-
-    # print("test BasicBlock input ", data[0][0][0][:100])
-
-    inp_tensor = Tensor(data, dtype=ms.float32)
-
-    output = block(inp_tensor)
-
-    print(output.shape)
-    print("test Bottleneck output ", output[0][3][3][:100])
-
 
 def test_Bottleneck():
     block = Bottleneck(inplanes=64, planes=64)
@@ -425,21 +403,6 @@ def test_resnet50():
 
     print("原图大小为：{}".format(data.shape))
     resnet = ResNet(Bottleneck, [3, 4, 6, 3])
-
-    inp_tensor = Tensor(data, dtype=ms.float32)
-
-    output = resnet(inp_tensor)
-
-    for t in output:
-        print(t.shape)
-    print(output[0][0][0][1][:100])
-
-
-def test_deformative_resnet50():
-    data = np.load("/old/wlh/DBnetpp_mindspore/dbnet/test.npy")
-
-    print("原图大小为：{}".format(data.shape))
-    resnet = ResNet(Bottleneck, [3, 4, 6, 3], dcn={'deformable_groups': 1})
 
     inp_tensor = Tensor(data, dtype=ms.float32)
 

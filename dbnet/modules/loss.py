@@ -1,7 +1,11 @@
+import sys
+import mindspore.numpy as mnp
+import numpy as np
 import numpy as np
 
 from mindspore import Tensor, context, nn, ops
 import mindspore as ms
+from mindspore import Tensor, nn, ops, context
 
 # Input:
 #             pred: A dict which contains predictions.
@@ -51,6 +55,7 @@ class L1BalanceCELoss(nn.Cell):
 
         return loss
 
+
 class DiceLoss(nn.Cell):
 
     def __init__(self, eps=1e-6):
@@ -74,6 +79,7 @@ class DiceLoss(nn.Cell):
 
         return loss
 
+
 class MaskL1Loss(nn.Cell):
 
     def __init__(self):
@@ -87,6 +93,7 @@ class MaskL1Loss(nn.Cell):
         loss = ((pred[:, 0] - gt).abs() * mask).sum() / mask_sum
 
         return loss
+
 
 class BalanceCrossEntropyLoss(nn.Cell):
     '''
@@ -144,11 +151,10 @@ class BalanceCrossEntropyLoss(nn.Cell):
         return loss
 
 if __name__ == "__main__":
-
     context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=5)
 
-    pred = Tensor(np.load("/opt/nvme1n1/wz/dbnet_torch/pred.npy"),dtype=ms.float32)
-    gt = Tensor(np.load("/opt/nvme1n1/wz/dbnet_torch/gt.npy"),dtype=ms.float32)
+    pred = Tensor(np.load("/opt/nvme1n1/wz/dbnet_torch/pred.npy"), dtype=ms.float32)
+    gt = Tensor(np.load("/opt/nvme1n1/wz/dbnet_torch/gt.npy"), dtype=ms.float32)
     gt_mask = Tensor(np.load("/opt/nvme1n1/wz/dbnet_torch/mask.npy"), dtype=ms.float32)
 
     print(pred.shape, gt.shape, gt_mask.shape)
@@ -163,7 +169,7 @@ if __name__ == "__main__":
     # print(maskl1loss.construct(pred,gt,mask))
 
     balance_loss = BalanceCrossEntropyLoss()
-    print(balance_loss.construct(pred,gt,gt_mask,False))
+    print(balance_loss.construct(pred, gt, gt_mask, False))
 
 
     # pred_dict = {}
@@ -172,3 +178,5 @@ if __name__ == "__main__":
 
     # l1balanceloss = L1BalanceCELoss()
     # print(l1balanceloss.construct(pred_dict, gt, gt_mask, thresh_map, thresh_mask))
+
+

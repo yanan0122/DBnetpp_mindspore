@@ -7,8 +7,6 @@ import mindspore.nn as nn
 from mindspore.common.initializer import HeNormal
 from mindspore.common import initializer as init
 
-import sys
-sys.path.insert(0, '..')
 from utils.asf import ASF
 
 
