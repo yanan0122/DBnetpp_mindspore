@@ -32,7 +32,7 @@ def learning_rate_function(lr, cur_epoch_num):
 
 def train():
     # Config
-    stream = open('/home/group1/wjf_dbnet/dbnet_ms/dbnet/config.yaml', 'r', encoding='utf-8')
+    stream = open('config.yaml', 'r', encoding='utf-8')
     config = yaml.load(stream, Loader=yaml.FullLoader)
     stream.close()
 
@@ -52,7 +52,7 @@ def train():
     network_with_loss = WithLossCell(network, criterion)
     model = Model(network_with_loss, optimizer=opt)
 
-    # Train & Save
+    # Train
     config_ck = CheckpointConfig(save_checkpoint_steps=4, keep_checkpoint_max=10)
     ckpoint = ModelCheckpoint(prefix="DBNetpp", directory="./checkpoint/1/", config=config_ck)
     model.train(config['train']['n_epoch'], train_dataset, dataset_sink_mode=False,
