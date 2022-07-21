@@ -3,7 +3,7 @@ train:
       backbone: 'resnet18'
       pretrained: True
       HeadName: 'DB'
-      in_channels: [64, 128, 256, 512]  #[256, 512, 1024, 2048] 
+      in_channels: [64, 128, 256, 512]  #[256, 512, 1024, 2048]
       inner_channels: 256
       k: 50
       adaptive: True
@@ -17,7 +17,7 @@ train:
       show_step: 5
       print_format: 'linux'  # linux or windows
       restore: True
-      resume: "/opt/nvme1n1/wz/dbnet/pretrained_synthtext_resnet18.ckpt"
+      resume: "./dbnet/pretrained_synthtext_resnet18.ckpt"
       checkpoints: './checkpoints'
       is_icdar2015: True
       is_transform: True
@@ -47,23 +47,7 @@ test:
       is_poly: False
       is_icdar2015: True
       test_img_format: '.jpg'
-      test_img_dir: 
-      test_gt_dir: 
-      checkpoints: 
+      test_img_dir:
+      test_gt_dir:
+      checkpoints:
       out_dir: './outputs_test'
-      
-
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      

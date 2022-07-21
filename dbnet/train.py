@@ -9,15 +9,15 @@ import mindspore as ms
 import mindspore.dataset as ds
 import mindspore.nn as nn
 from mindspore.train.serialization import load_checkpoint, load_param_into_net
-from mindspore.train.callback import LearningRateScheduler, CheckpointConfig, Callback, LossMonitor
+from mindspore.train.callback import LearningRateScheduler, CheckpointConfig, ModelCheckpoint, LossMonitor
 from mindspore.train.model import Model
 from mindspore import context, Tensor
 
 from dataloader.load import DataLoader
-import DBnetpp_mindspore.dbnet.modules.backbone as backbone
-import DBnetpp_mindspore.dbnet.modules.detector as detector
-import DBnetpp_mindspore.dbnet.modules.loss as loss
-from DBnetpp_mindspore.dbnet.modules.model import DBnet, WithLossCell, LossCallBack
+import modules.backbone as backbone
+import modules.detector as detector
+import modules.loss as loss
+from modules.model import DBnet, WithLossCell, LossCallBack
 
 
 def learning_rate_function(lr, cur_epoch_num):
@@ -31,41 +31,36 @@ def learning_rate_function(lr, cur_epoch_num):
 
 
 def train():
-    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=5)
-
     stream = open('/home/group1/wjf_dbnet/dbnet_ms/dbnet/config.yaml', 'r', encoding='utf-8')
     config = yaml.load(stream, Loader=yaml.FullLoader)
     stream.close()
 
     data_loader = DataLoader(config)
-
     train_dataset = ds.GeneratorDataset(data_loader, ['img', 'gts', 'gt_masks', 'thresh_maps', 'thresh_masks'])
-
     train_dataset = train_dataset.batch(config['train']['batch_size'])  # default batch size 16. dataset size 63
 
     network = DBnet()
-
-    # pretrained_weights = load_checkpoint(config['train']['resume'])
-
-    # load_param_into_net(network, pretrained_weights)
+    pretrained_weights = load_checkpoint(config['train']['resume'])
+    load_param_into_net(network, pretrained_weights)
 
     opt = nn.SGD(params=network.trainable_params(), learning_rate=0.007, momentum=0.9, weight_decay=5e-4)
-
     criterion = loss.L1BalanceCELoss()
-
     network_with_loss = WithLossCell(network, criterion)
-
     model = Model(network_with_loss, optimizer=opt)
 
-    loss_cb = LossMonitor()
 
+    config_ck = CheckpointConfig(save_checkpoint_steps=1875, keep_checkpoint_max=10)
+    ckpoint = ModelCheckpoint(prefix="DBNetpp", directory="./checkpoint", config=config_ck)
     model.train(config['train']['n_epoch'], train_dataset, dataset_sink_mode=False,
-                callbacks=[loss_cb, LearningRateScheduler(learning_rate_function)])
+                callbacks=[LossMonitor(), LearningRateScheduler(learning_rate_function)])
 
-    print("train complete")
+    print("Train has completed.")
 
 
 if __name__ == '__main__':
+    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=[4, 5, 6, 7])
+
+
     train()
 
 # def feed(train_dataset):

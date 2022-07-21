@@ -1,7 +1,6 @@
 import os
 import sys
 
-import mindspore
 import mindspore as ms
 from mindspore import ops,Tensor
 from mindspore import context,set_seed
@@ -10,7 +9,6 @@ from mindspore.common.initializer import initializer, Normal, Constant
 from mindspore import load_checkpoint, load_param_into_net
 
 import numpy as np
-import math
 from collections import OrderedDict
 
 import DBnetpp_mindspore.dbnet.modules.backbone as backbone
