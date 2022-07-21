@@ -17,7 +17,7 @@ from dataloader.load import DataLoader
 import modules.backbone as backbone
 import modules.detector as detector
 import modules.loss as loss
-from modules.model import DBnet, WithLossCell, LossCallBack
+from modules.model import DBnet, DBnetPP, WithLossCell, LossCallBack
 
 
 def learning_rate_function(lr, cur_epoch_num):
@@ -31,36 +31,37 @@ def learning_rate_function(lr, cur_epoch_num):
 
 
 def train():
-    # Config
+    ## Config
     stream = open('config.yaml', 'r', encoding='utf-8')
     config = yaml.load(stream, Loader=yaml.FullLoader)
     stream.close()
 
-    # Dataset
+    ## Dataset
     data_loader = DataLoader(config, func="train")
     train_dataset = ds.GeneratorDataset(data_loader, ['img', 'gts', 'gt_masks', 'thresh_maps', 'thresh_masks'])
-    train_dataset = train_dataset.batch(config['train']['batch_size'])  # default batch size 16. dataset size 63
+    train_dataset = train_dataset.batch(config['train']['batch_size'])
+    # default batch size 16. dataset size 63.
 
-    # Network
+    ## Network
     network = DBnet()
-    pretrained_weights = load_checkpoint(config['train']['resume'])
-    load_param_into_net(network, pretrained_weights)
+    # pretrained_weights = load_checkpoint(config['train']['resume'])
+    # load_param_into_net(network.resnet, pretrained_weights)
 
-    # Model: Loss & Optimizer
+    ## Model: Loss & Optimizer
     opt = nn.SGD(params=network.trainable_params(), learning_rate=0.007, momentum=0.9, weight_decay=5e-4)
     criterion = loss.L1BalanceCELoss()
     network_with_loss = WithLossCell(network, criterion)
     model = Model(network_with_loss, optimizer=opt)
 
-    # Train
-    config_ck = CheckpointConfig(save_checkpoint_steps=4, keep_checkpoint_max=10)
-    ckpoint = ModelCheckpoint(prefix="DBNetpp", directory="./checkpoint/1/", config=config_ck)
+    ## Train
+    config_ck = CheckpointConfig(save_checkpoint_steps=63, keep_checkpoint_max=10)
+    ckpoint = ModelCheckpoint(prefix="DBNetPP", directory="./checkpoints/DBNet/", config=config_ck)
     model.train(config['train']['n_epoch'], train_dataset, dataset_sink_mode=False,
                 callbacks=[LossMonitor(), LearningRateScheduler(learning_rate_function), ckpoint])
 
 
 if __name__ == '__main__':
-    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=[4, 5, 6, 7])
+    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=2)
     train()
     print("Train has completed.")
 

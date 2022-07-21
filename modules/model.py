@@ -10,8 +10,8 @@ import mindspore.dataset as ds
 import modules.backbone as backbone
 import modules.detector as detector
 import modules.loss as loss
-from utils.SegDetectorRepresenter import SegDetectorRepresenter
-from utils.quad_measurer import QuadMeasurer
+from utils.seg_detector_representer import SegDetectorRepresenter
+from utils.quad import QuadMeasurer, AverageMeter
 from dataloader.load import DataLoader
 
 
@@ -198,36 +198,17 @@ class LossCallBack_new(Callback):
             # loss_file.write("\n")
             # loss_file.close()
 
-    def test(self, run_context):
-        print("test datasets:{}".format(self.test_datasets))
-        print("len(test datasets):{}".format(len(self.test_datasets)))
+    # def test(self, run_context):
+    #     print("test datasets:{}".format(self.test_datasets))
+    #     print("len(test datasets):{}".format(len(self.test_datasets)))
 
-    def epoch_end(self, run_context):
-        cb_params = run_context.original_args()
-        model = cb_params.train_network
-        for i, batch in tqdm(enumerate(self.test_datasets), total=len(self.test_datasets)):
-            pred = model(batch)
-            output = self.SegDetectorRepresenter.represent(batch, pred, is_output_polygon=self.args['train']['polygon'])
-            raw_metric = self.QuadMeasurer.validate_measure(batch, output,
-                                                            is_output_polygon=self.args['train']['polygon'],
-                                                            box_thresh=self.args['train']['box_thresh'])
-            raw_metrics.append(raw_metric)
-
-
-class AverageMeter():
-    """Computes and stores the average and current value"""
-
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
+    # def epoch_end(self, run_context):
+    #     cb_params = run_context.original_args()
+    #     model = cb_params.train_network
+    #     for i, batch in tqdm(enumerate(self.test_datasets), total=len(self.test_datasets)):
+    #         pred = model(batch)
+    #         output = self.SegDetectorRepresenter.represent(batch, pred, is_output_polygon=self.args['train']['polygon'])
+    #         raw_metric = self.QuadMeasurer.validate_measure(batch, output,
+    #                                                         is_output_polygon=self.args['train']['polygon'],
+    #                                                         box_thresh=self.args['train']['box_thresh'])
+    #         raw_metrics.append(raw_metric)

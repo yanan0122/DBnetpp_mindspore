@@ -1,4 +1,5 @@
-# coding:utf-8
+import sys
+sys.path.insert(0, './')
 from utils.dcn import DeformConv2d
 
 import mindspore as ms

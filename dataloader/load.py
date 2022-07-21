@@ -52,7 +52,7 @@ class DataLoader():
             img_paths = glob.glob(os.path.join(config['train']['train_img_dir'], '*' + config['train']['train_img_format']))
         else:
             img_paths = glob.glob(
-                os.path.join(config['train']['val_img_dir'], '*' + config['train']['train_img_format']))
+                os.path.join(config['train']['val_img_dir'], '*' + config['train']['val_img_format']))
         gt_paths = []
         for img_path in img_paths:
 
