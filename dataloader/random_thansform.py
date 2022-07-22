@@ -150,9 +150,9 @@ class RandomCropData():
         return 0, 0, w, h
 
 
-class Random_Augment():
+class RandomAugment():
     def __init__(self):
-        super(Random_Augment, self).__init__()
+        super(RandomAugment, self).__init__()
         self.random_crop_data = RandomCropData()
 
     def augment_poly(self, aug, img_shape, poly):

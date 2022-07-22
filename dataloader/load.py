@@ -10,9 +10,9 @@ import mindspore as ms
 from mindspore.dataset.vision.py_transforms import RandomColorAdjust, ToTensor, Normalize
 from mindspore import Tensor
 
-from dataloader.random_thansform import Random_Augment
-from dataloader.MakeSegMap import MakeSegDetectionData
-from dataloader.MakeBorderMap import MakeBorderMap
+from random_thansform import RandomAugment
+from make_seg_map import MakeSegDetectionData
+from make_border_map import MakeBorderMap
 
 
 def get_img(img_path):
@@ -40,12 +40,12 @@ def get_bboxes(gt_path, config):
     return np.array(polys), tags
 
 
-class DataLoader():
+class DataLoader:
 
     def __init__(self, config, func="train"):
 
         self.config = config
-        self.ra = Random_Augment()
+        self.ra = RandomAugment()
         self.ms = MakeSegDetectionData()
         self.mb = MakeBorderMap()
         if func == "train":
