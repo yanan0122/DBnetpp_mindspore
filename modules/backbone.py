@@ -4,14 +4,13 @@ from utils.dcn import DeformConv2d
 
 import mindspore as ms
 from mindspore import ops, Tensor
-from mindspore import context, set_seed
+from mindspore import context
 import mindspore.nn as nn
-from mindspore.common.initializer import initializer, Normal, Constant
+from mindspore.common.initializer import Normal
 from mindspore import load_checkpoint, load_param_into_net
 
 import numpy as np
 import math
-from collections import OrderedDict
 
 
 # set initializer to constant for debugging.

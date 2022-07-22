@@ -13,7 +13,7 @@ from mindspore.train.callback import LearningRateScheduler, CheckpointConfig, Mo
 from mindspore.train.model import Model
 from mindspore import context, Tensor
 
-from dataloader.load import DataLoader
+from datasets.load import DataLoader
 import modules.backbone as backbone
 import modules.detector as detector
 import modules.loss as loss

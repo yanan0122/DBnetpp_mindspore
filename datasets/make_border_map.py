@@ -1,9 +1,7 @@
-import warnings
 import numpy as np
 import cv2
 from shapely.geometry import Polygon
 import pyclipper
-import pdb
 
 
 class MakeBorderMap():

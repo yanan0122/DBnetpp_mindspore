@@ -1,6 +1,3 @@
-import sys
-import mindspore.numpy as mnp
-import numpy as np
 import numpy as np
 
 from mindspore import Tensor, context, nn, ops
@@ -178,5 +175,3 @@ if __name__ == "__main__":
 
     # l1balanceloss = L1BalanceCELoss()
     # print(l1balanceloss.construct(pred_dict, gt, gt_mask, thresh_map, thresh_mask))
-
-

@@ -2,13 +2,10 @@ import numpy as np
 from PIL import Image
 import glob
 import cv2
-import random
 import os
 import yaml
 
-import mindspore as ms
 from mindspore.dataset.vision.py_transforms import RandomColorAdjust, ToTensor, Normalize
-from mindspore import Tensor
 
 from random_thansform import RandomAugment
 from make_seg_map import MakeSegDetectionData

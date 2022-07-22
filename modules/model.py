@@ -1,7 +1,6 @@
 import time
 import numpy as np
 import yaml
-import tqdm
 
 from mindspore.train.callback import Callback
 import mindspore.nn as nn
@@ -9,7 +8,6 @@ import mindspore.dataset as ds
 
 import modules.backbone as backbone
 import modules.detector as detector
-import modules.loss as loss
 from DBnetpp_mindspore.utils.post_process import SegDetectorRepresenter
 from DBnetpp_mindspore.utils.metric import QuadMeasurer, AverageMeter
 from datasets.load import DataLoader
