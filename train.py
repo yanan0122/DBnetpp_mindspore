@@ -1,23 +1,16 @@
-import sys
-import os
 
 import yaml
-import argparse
 import numpy as np
 
-import mindspore as ms
 import mindspore.dataset as ds
 import mindspore.nn as nn
-from mindspore.train.serialization import load_checkpoint, load_param_into_net
 from mindspore.train.callback import LearningRateScheduler, CheckpointConfig, ModelCheckpoint, LossMonitor
 from mindspore.train.model import Model
-from mindspore import context, Tensor
+from mindspore import context
 
 from datasets.load import DataLoader
-import modules.backbone as backbone
-import modules.detector as detector
 import modules.loss as loss
-from modules.model import DBnet, DBnetPP, WithLossCell, LossCallBack
+from modules.model import DBnet, DBnetPP, WithLossCell
 
 
 def learning_rate_function(lr, cur_epoch_num):
@@ -37,13 +30,13 @@ def train():
     stream.close()
 
     ## Dataset
-    data_loader = DataLoader(config, func="train")
+    data_loader = DataLoader(config, isTrain=True)
     train_dataset = ds.GeneratorDataset(data_loader, ['img', 'gts', 'gt_masks', 'thresh_maps', 'thresh_masks'])
     train_dataset = train_dataset.batch(config['train']['batch_size'])
     # default batch size 16. dataset size 63.
 
     ## Network
-    network = DBnet()
+    network = DBnetPP()
     # pretrained_weights = load_checkpoint(config['train']['resume'])
     # load_param_into_net(network.resnet, pretrained_weights)
 
@@ -55,13 +48,13 @@ def train():
 
     ## Train
     config_ck = CheckpointConfig(save_checkpoint_steps=63, keep_checkpoint_max=10)
-    ckpoint = ModelCheckpoint(prefix="DBNetPP", directory="./checkpoints/DBNet/", config=config_ck)
+    ckpoint = ModelCheckpoint(prefix="DBnetPP", directory="./checkpoints/DBnetPP/", config=config_ck)
     model.train(config['train']['n_epoch'], train_dataset, dataset_sink_mode=False,
                 callbacks=[LossMonitor(), LearningRateScheduler(learning_rate_function), ckpoint])
 
 
 if __name__ == '__main__':
-    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=2)
+    context.set_context(mode=context.PYNATIVE_MODE, device_target="Ascend", device_id=2)
     train()
     print("Train has completed.")
 

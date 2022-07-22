@@ -8,8 +8,8 @@ import mindspore.dataset as ds
 
 import modules.backbone as backbone
 import modules.detector as detector
-from DBnetpp_mindspore.utils.post_process import SegDetectorRepresenter
-from DBnetpp_mindspore.utils.metric import QuadMeasurer, AverageMeter
+from utils.post_process import SegDetectorRepresenter
+from utils.metric import QuadMeasurer, AverageMeter
 from datasets.load import DataLoader
 
 

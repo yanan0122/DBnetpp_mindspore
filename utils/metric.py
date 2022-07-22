@@ -1,12 +1,11 @@
 import numpy as np
-
+import cv2
+from shapely.geometry import Polygon
 from collections import namedtuple
 
-import numpy as np
-from shapely.geometry import Polygon
 
 
-class AverageMeter():
+class AverageMeter:
     """Computes and stores the average and current value"""
 
     def __init__(self):
@@ -25,8 +24,9 @@ class AverageMeter():
         self.avg = self.sum / self.count
 
 
-class DetectionIoUEvaluator(object):
-    def __init__(self, iou_constraint=0.5, area_precision_constraint=0.5):
+class DetectionIoUEvaluator:
+    def __init__(self, is_output_polygon=False, iou_constraint=0.5, area_precision_constraint=0.5):
+        self.is_output_polygon = is_output_polygon
         self.iou_constraint = iou_constraint
         self.area_precision_constraint = area_precision_constraint
 
@@ -144,12 +144,20 @@ class DetectionIoUEvaluator(object):
             iouMat = np.empty(outputShape)
             gtRectMat = np.zeros(len(gtPols), np.int8)
             detRectMat = np.zeros(len(detPols), np.int8)
-            for gtNum in range(len(gtPols)):
-                for detNum in range(len(detPols)):
-                    pG = gtPols[gtNum]
-                    pD = detPols[detNum]
-                    iouMat[gtNum, detNum] = get_intersection_over_union(pD, pG)
-
+            if self.is_output_polygon:
+                for gtNum in range(len(gtPols)):
+                    for detNum in range(len(detPols)):
+                        pG = gtPols[gtNum]
+                        pD = detPols[detNum]
+                        iouMat[gtNum, detNum] = get_intersection_over_union(pD, pG)
+            else:
+                # gtPols = np.float32(gtPols)
+                # detPols = np.float32(detPols)
+                for gtNum in range(len(gtPols)):
+                    for detNum in range(len(detPols)):
+                        pG = np.float32(gtPols[gtNum])
+                        pD = np.float32(detPols[detNum])
+                        iouMat[gtNum, detNum] = self.iou_rotate(pD, pG)
             for gtNum in range(len(gtPols)):
                 for detNum in range(len(detPols)):
                     if gtRectMat[gtNum] == 0 and detRectMat[
@@ -220,8 +228,30 @@ class DetectionIoUEvaluator(object):
 
         return methodMetrics
 
+    @staticmethod
+    def iou_rotate(box_a, box_b, method='union'):
+        rect_a = cv2.minAreaRect(box_a)
+        rect_b = cv2.minAreaRect(box_b)
+        r1 = cv2.rotatedRectangleIntersection(rect_a, rect_b)
+        if r1[0] == 0:
+            return 0
+        else:
+            inter_area = cv2.contourArea(r1[1])
+            area_a = cv2.contourArea(box_a)
+            area_b = cv2.contourArea(box_b)
+            union_area = area_a + area_b - inter_area
+            if union_area == 0 or inter_area == 0:
+                return 0
+            if method == 'union':
+                iou = inter_area / union_area
+            elif method == 'intersection':
+                iou = inter_area / min(area_a, area_b)
+            else:
+                raise NotImplementedError
+            return iou
 
-class QuadMeasurer():
+
+class QuadMeasurer:
     def __init__(self, **kwargs):
         self.evaluator = DetectionIoUEvaluator()
 

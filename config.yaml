@@ -26,8 +26,6 @@ train:
       val_img_format: '.jpg'
       train_img_dir: "./data/train_images/"
       train_gt_dir: "./data/train_gts/"
-      val_img_dir: "./data/test_images/"
-      val_gt_dir: "./data/test_gts/"
       radom_angle: [-10, 10]
       output_path: './outputs_val'
       decay_method: 'e_decay'  # e_decay: 指数衰减, s_decay: 指定epoch衰减
@@ -51,8 +49,12 @@ test:
       max_candidates: 1000
       is_poly: False
       is_icdar2015: True
+      is_transform: False
+      radom_angle: [-10, 10]
       test_img_format: '.jpg'
       test_img_dir:
       test_gt_dir:
       checkpoints:
       out_dir: './outputs_test'
+      test_img_dir: "./data/test_images/"
+      test_gt_dir: "./data/test_gts/"

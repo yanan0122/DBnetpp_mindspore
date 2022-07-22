@@ -1,12 +1,13 @@
-from tqdm.auto import tqdm
-import copy
 import time
 import yaml
 
 import mindspore
+from mindspore import Tensor, context
 import mindspore.dataset as ds
 import mindspore.nn as nn
 
+import sys
+sys.path.insert(0, '.')
 from datasets.load import DataLoader
 from utils.metric import QuadMetric
 from utils.post_process import SegDetectorRepresenter
@@ -17,25 +18,22 @@ class WithEvalCell(nn.Cell):
         super(WithEvalCell, self).__init__(auto_prefix=False)
         self.model = model
         self.dataset = dataset
-
-        self.post_process = SegDetectorRepresenter()
         self.metric_cls = QuadMetric()
+        self.post_process = SegDetectorRepresenter()
 
-    def eval(self):
-        raw_metrics = []
-        total_frame = 0.0
-        total_time = 0.0
-        for i, batch in enumerate(self.validate_loader):
-            start = time.time()
-            preds = self.model(batch['img'])
-            boxes, scores = self.post_process(batch, preds, self.metric_cls.is_output_polygon)
-            total_frame += batch['img'].size()[0]
-            total_time += time.time() - start
-            raw_metric = self.metric_cls.validate_measure(batch, (boxes, scores))
-            raw_metrics.append(raw_metric)
-        metrics = self.metric_cls.gather_measure(raw_metrics)
-        print('FPS:{}'.format(total_frame / total_time))
-        return metrics['recall'].avg, metrics['precision'].avg, metrics['fmeasure'].avg
+        self.total_frame = 0.0
+        self.total_time = 0.0
+        self.raw_metrics = []
+
+    def construct(self, batch):
+        start = time.time()
+        preds = self.model(batch['img'])
+        boxes, scores = self.post_process(batch, preds, self.metric_cls.is_output_polygon)
+        total_frame += batch['img'].size()[0]
+        total_time += time.time() - start
+
+        raw_metric = self.metric_cls.validate_measure(batch, (boxes, scores))
+        return raw_metric
 
 
 def eval():
@@ -45,16 +43,27 @@ def eval():
     stream.close()
 
     ## Dataset
-    data_loader = DataLoader(config, func="test")
-    val_dataset = ds.GeneratorDataset(data_loader, ['img', 'gts', 'gt_masks', 'thresh_maps', 'thresh_masks'])
-    # dl = dataset.create_dict_iterator()
+    data_loader = DataLoader(config, isTrain=False)
+    dataset = ds.GeneratorDataset(data_loader, ['img', 'gts', 'gt_masks', 'thresh_maps', 'thresh_masks'])
+    val_dataset = dataset.create_dict_iterator()
 
     ## Model
     model = mindspore.load_checkpoint('./checkpoints/DBNetPP-19_63.ckpt')
 
-    ## Eval
+    ## Network
     eval_net = WithEvalCell(model, val_dataset)
     eval_net.set_train(False)
 
+    ## eval
+    raw_metrics = []
+    for batch in val_dataset:
+        raw_metric = eval_net(batch)
+        raw_metrics.append(raw_metric)
+    metrics = eval_net.metric_cls.gather_measure(eval_net.raw_metrics)
+    print(f'FPS: {eval_net.total_frame / eval_net.total_time}')
+    print(metrics['recall'].avg, metrics['precision'].avg, metrics['fmeasure'].avg)
+
+
 if __name__ == '__main__':
+    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=2)
     eval()
