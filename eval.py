@@ -11,6 +11,7 @@ sys.path.insert(0, '.')
 from datasets.load import DataLoader
 from utils.metric import QuadMetric
 from utils.post_process import SegDetectorRepresenter
+from modules.model import DBnet, DBnetPP
 
 
 class WithEvalCell(nn.Cell):
@@ -48,9 +49,11 @@ def eval():
     val_dataset = dataset.create_dict_iterator()
 
     ## Model
-    model = mindspore.load_checkpoint('./checkpoints/DBNetPP-19_63.ckpt')
+    model = DBnet()
+    model_dict = mindspore.load_checkpoint('./checkpoints/DBnet/DBnet-1_63.ckpt')
+    mindspore.load_param_into_net(model, model_dict)
 
-    ## Network
+    ## Eval Network
     eval_net = WithEvalCell(model, val_dataset)
     eval_net.set_train(False)
 
@@ -65,5 +68,5 @@ def eval():
 
 
 if __name__ == '__main__':
-    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=2)
+    context.set_context(mode=context.PYNATIVE_MODE, device_target="Ascend", device_id=7)
     eval()

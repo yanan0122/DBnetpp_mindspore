@@ -74,16 +74,17 @@ class DataLoader():
     def __init__(self, config, isTrain=True):
 
         self.config = config
+        self.isTrain = isTrain
         self.ra = RandomAugment()
         self.ms = MakeSegDetectionData()
         self.mb = MakeBorderMap()
 
         if isTrain:
-            img_paths = glob.glob(os.path.join(config['train']['train_img_dir'],'*'
-                                               + config['train']['train_img_format']))
+            img_paths = glob.glob(os.path.join(config['train']['train_img_dir'],
+                                               '*' + config['train']['train_img_format']))
         else:
-            img_paths = glob.glob(os.path.join(config['test']['test_img_dir'],'*'
-                                               + config['test']['test_img_format']))
+            img_paths = glob.glob(os.path.join(config['test']['test_img_dir'],
+                                               '*' + config['test']['test_img_format']))
         gt_paths = []
 
         if isTrain:
@@ -98,7 +99,7 @@ class DataLoader():
             for img_path in img_paths:
                 im_name = img_path.split('/')[-1].split('.')[0]
                 if(config['test']['is_icdar2015']):
-                    gt_file_name = 'gt_' + im_name + '.jpg.txt'
+                    gt_file_name = 'gt_' + im_name + '.txt'
                 else:
                     gt_file_name = im_name + '.txt'
                 gt_paths.append(os.path.join(config['test']['test_gt_dir'], gt_file_name))
@@ -117,23 +118,29 @@ class DataLoader():
         img = get_img(img_path)
         polys, dontcare = get_bboxes(gt_path,self.config)
 
-        if self.config['test']['is_transform']:
+        if self.config['train']['is_transform'] and self.isTrain:
             img, polys = self.ra.random_scale(img, polys, 640)
-            img, polys = self.ra.random_rotate(img, polys, self.config['test']['radom_angle'])
+            img, polys = self.ra.random_rotate(img, polys, self.config['train']['radom_angle'])
             img, polys = self.ra.random_flip(img, polys)
             img, polys, dontcare = self.ra.random_crop_db(img, polys, dontcare)
+        else:
+            img, polys = self.ra.random_scale(img, polys, 640)
+            img, polys = self.ra.random_rotate(img, polys, self.config['train']['radom_angle'])
+            img, polys = self.ra.random_flip(img, polys)
+            img, polys, dontcare = self.ra.random_crop_db(img, polys, dontcare)
+        # TODO: 完善分支
 
         img, gt, gt_mask = self.ms.process(img, polys, dontcare)
         img, thresh_map, thresh_mask = self.mb.process(img, polys, dontcare)
 
-        if self.config['test']['is_show']:
+        if self.config['train']['is_show'] and self.isTrain:
             cv2.imwrite('img.jpg',img)
             cv2.imwrite('gt.jpg',gt[0]*255)
             cv2.imwrite('gt_mask.jpg',gt_mask[0]*255)
             cv2.imwrite('thresh_map.jpg',thresh_map*255)
             cv2.imwrite('thresh_mask.jpg',thresh_mask*255)
 
-        if self.config['test']['is_transform']:
+        if self.config['train']['is_transform'] and self.isTrain:
             img = Image.fromarray(img)
             img = img.convert('RGB')
             colorjitter = RandomColorAdjust(brightness=32.0 / 255, saturation=0.5)
@@ -156,5 +163,5 @@ if __name__ == '__main__':
     stream = open('./config.yaml', 'r', encoding='utf-8')
     config = yaml.load(stream, Loader=yaml.FullLoader)
     stream.close()
-    data_loader = DataLoader(config)
+    data_loader = DataLoader(config, False)
     print(data_loader[1][0].shape)
