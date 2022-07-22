@@ -146,4 +146,4 @@ run
 .idea
 dbnet/.idea
 checkpoints
-datasets/*
+data/t*

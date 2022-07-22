@@ -1,46 +1,15 @@
+from tqdm.auto import tqdm
 import copy
 import time
 import yaml
-from tqdm.auto import tqdm
 
 import mindspore
 import mindspore.dataset as ds
 import mindspore.nn as nn
 
-from DBnetpp_mindspore.dataloader.load import DataLoader
-
-
-def get_post_processing(config):
-    try:
-        cls = eval(config['type'])(**config['args'])
-        return cls
-    except:
-        return None
-
-
-def get_metric(config):
-    try:
-        if 'args' not in config:
-            args = {}
-        else:
-            args = config['args']
-        if isinstance(args, dict):
-            cls = eval(config['type'])(**args)
-        else:
-            cls = eval(config['type'])(args)
-        return cls
-    except:
-        return None
-
-
-def build_model(config):
-    """
-    get architecture model class
-    """
-    copy_config = copy.deepcopy(config)
-    arch_type = copy_config.pop('type')
-    arch_model = eval(arch_type)(copy_config)
-    return arch_model
+from datasets.load import DataLoader
+from utils.metric import QuadMetric
+from utils.post_process import SegDetectorRepresenter
 
 
 class WithEvalCell(nn.Cell):
@@ -49,22 +18,21 @@ class WithEvalCell(nn.Cell):
         self.model = model
         self.dataset = dataset
 
-        self.post_process = get_post_processing(config['post_processing'])
-        self.metric_cls = get_metric(config['metric'])
+        self.post_process = SegDetectorRepresenter()
+        self.metric_cls = QuadMetric()
 
     def eval(self):
         raw_metrics = []
         total_frame = 0.0
         total_time = 0.0
         for i, batch in enumerate(self.validate_loader):
-            with torch.no_grad():
-                start = time.time()
-                preds = self.model(batch['img'])
-                boxes, scores = self.post_process(batch, preds,is_output_polygon=self.metric_cls.is_output_polygon)
-                total_frame += batch['img'].size()[0]
-                total_time += time.time() - start
-                raw_metric = self.metric_cls.validate_measure(batch, (boxes, scores))
-                raw_metrics.append(raw_metric)
+            start = time.time()
+            preds = self.model(batch['img'])
+            boxes, scores = self.post_process(batch, preds, self.metric_cls.is_output_polygon)
+            total_frame += batch['img'].size()[0]
+            total_time += time.time() - start
+            raw_metric = self.metric_cls.validate_measure(batch, (boxes, scores))
+            raw_metrics.append(raw_metric)
         metrics = self.metric_cls.gather_measure(raw_metrics)
         print('FPS:{}'.format(total_frame / total_time))
         return metrics['recall'].avg, metrics['precision'].avg, metrics['fmeasure'].avg

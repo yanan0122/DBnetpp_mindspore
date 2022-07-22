@@ -24,10 +24,10 @@ train:
       is_show: False
       train_img_format: '.jpg'
       val_img_format: '.jpg'
-      train_img_dir: "./datasets/train_images/"
-      train_gt_dir: "./datasets/train_gts/"
-      val_img_dir: "./datasets/test_images/"
-      val_gt_dir: "./datasets/test_gts/"
+      train_img_dir: "./data/train_images/"
+      train_gt_dir: "./data/train_gts/"
+      val_img_dir: "./data/test_images/"
+      val_gt_dir: "./data/test_gts/"
       radom_angle: [-10, 10]
       output_path: './outputs_val'
       decay_method: 'e_decay'  # e_decay: 指数衰减, s_decay: 指定epoch衰减

@@ -10,9 +10,9 @@ import mindspore.dataset as ds
 import modules.backbone as backbone
 import modules.detector as detector
 import modules.loss as loss
-from utils.seg_detector_representer import SegDetectorRepresenter
+from DBnetpp_mindspore.utils.post_process import SegDetectorRepresenter
 from DBnetpp_mindspore.utils.metric import QuadMeasurer, AverageMeter
-from dataloader.load import DataLoader
+from datasets.load import DataLoader
 
 
 class DBnet(nn.Cell):
