@@ -11,7 +11,7 @@ import modules.backbone as backbone
 import modules.detector as detector
 import modules.loss as loss
 from utils.seg_detector_representer import SegDetectorRepresenter
-from utils.quad import QuadMeasurer, AverageMeter
+from DBnetpp_mindspore.utils.metric import QuadMeasurer, AverageMeter
 from dataloader.load import DataLoader
 
 
@@ -153,7 +153,7 @@ class LossCallBack_new(Callback):
 
         self._per_print_times = per_print_times
         self.loss_avg = AverageMeter()
-        stream = open('/home/group1/wjf_dbnet/dbnet_ms/dbnet/config.yaml', 'r', encoding='utf-8')
+        stream = open('./config.yaml', 'r', encoding='utf-8')
         self.arg = yaml.load(stream, Loader=yaml.FullLoader)
         stream.close()
 
