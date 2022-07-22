@@ -66,7 +66,6 @@ class DataLoader:
             else:
                 gt_paths.append(os.path.join(config['train']['val_gt_dir'], gt_file_name))
 
-
         self.img_paths = img_paths
         self.gt_paths = gt_paths
 
@@ -117,7 +116,7 @@ class DataLoader:
 
 
 if __name__ == '__main__':
-    stream = open('/home/group1/wjf_dbnet/dbnet_ms/dbnet/config.yaml', 'r', encoding='utf-8')
+    stream = open('./config.yaml', 'r', encoding='utf-8')
     config = yaml.load(stream, Loader=yaml.FullLoader)
     data_loader = DataLoader(config)
     stream.close()

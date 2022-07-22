@@ -1,22 +1,13 @@
-import os
-import sys
-import pathlib
+import copy
+import time
+import yaml
+from tqdm.auto import tqdm
 
 import mindspore
-from mindspore.dataset import GeneratorDataset
+import mindspore.dataset as ds
+import mindspore.nn as nn
 
 from DBnetpp_mindspore.dataloader.load import DataLoader
-__dir__ = pathlib.Path(os.path.abspath(__file__))
-sys.path.append(str(__dir__))
-sys.path.append(str(__dir__.parent.parent))
-# project = 'DBNet.pytorch'  # 工作项目根目录
-# sys.path.append(os.getcwd().split(project)[0] + project)
-
-import argparse
-import time
-import copy
-from tqdm.auto import tqdm
-import torch
 
 
 def get_post_processing(config):
@@ -52,43 +43,21 @@ def build_model(config):
     return arch_model
 
 
-class Eval():
-    def __init__(self, model_path, gpu_id=0):
-
-        # self.gpu_id = gpu_id
-        # if self.gpu_id is not None and isinstance(self.gpu_id, int) and torch.cuda.is_available():
-        #     self.device = torch.device("cuda:%s" % self.gpu_id)
-        #     torch.backends.cudnn.benchmark = True
-        # else:
-        #     self.device = torch.device("cpu")
-
-        checkpoint = torch.load(model_path)
-        config = checkpoint['config']
-        config['arch']['backbone']['pretrained'] = False
-
-        self.validate_loader = get_dataloader(config['dataset']['validate'], config['distributed'])
-
-        self.model = build_model(config['arch'])
-        self.model.load_state_dict(checkpoint['state_dict'])
-        # self.model.to(self.device)
+class WithEvalCell(nn.Cell):
+    def __init__(self, model, dataset):
+        super(WithEvalCell, self).__init__(auto_prefix=False)
+        self.model = model
+        self.dataset = dataset
 
         self.post_process = get_post_processing(config['post_processing'])
         self.metric_cls = get_metric(config['metric'])
 
     def eval(self):
-        self.model.eval()
-        # torch.cuda.empty_cache()  # speed up evaluating after training finished
         raw_metrics = []
         total_frame = 0.0
         total_time = 0.0
-        for i, batch in tqdm(enumerate(self.validate_loader), total=len(self.validate_loader), desc='test model'):
+        for i, batch in enumerate(self.validate_loader):
             with torch.no_grad():
-                # 数据进行转换和丢到gpu
-                for key, value in batch.items():
-                    if value is not None:
-                        if isinstance(value, torch.Tensor):
-                            batch[key] = value.to(self.device)
-                ###
                 start = time.time()
                 preds = self.model(batch['img'])
                 boxes, scores = self.post_process(batch, preds,is_output_polygon=self.metric_cls.is_output_polygon)
@@ -108,10 +77,16 @@ def eval():
     stream.close()
 
     ## Dataset
-    dataloader = DataLoader(config, func="eval")
-    dataset = GeneratorDataset(dataloader, ['data1', 'data2'])
+    data_loader = DataLoader(config, func="test")
+    val_dataset = ds.GeneratorDataset(data_loader, ['img', 'gts', 'gt_masks', 'thresh_maps', 'thresh_masks'])
     # dl = dataset.create_dict_iterator()
 
+    ## Model
+    model = mindspore.load_checkpoint('./checkpoints/DBNetPP-19_63.ckpt')
+
+    ## Eval
+    eval_net = WithEvalCell(model, val_dataset)
+    eval_net.set_train(False)
+
 if __name__ == '__main__':
-    ckpt = mindspore.load_checkpoint('./checkpoints/DBNetPP-19_63.ckpt')
-    print(len(ckpt))
+    eval()
