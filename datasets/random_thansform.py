@@ -238,3 +238,13 @@ class RandomAugment():
             else:
                 imgs[idx] = imgs[idx][i:i + th, j:j + tw]
         return imgs
+
+    def rescale(self, img, polys, shape:tuple=(640, 640)):
+        new_img = cv2.resize(img, dsize=shape)
+        new_img = np.array(new_img)
+
+        polys = polys.reshape(polys.shape[0], polys.shape[1] // 2, 2)
+        new_polys = np.split(polys, polys.shape[0], 0)
+        new_polys = [new_polys[i].squeeze() // np.array([img.shape[0] / shape[0], img.shape[1] / shape[1]])
+                     for i in range(len(new_polys))]
+        return new_img, new_polys

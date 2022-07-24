@@ -28,10 +28,10 @@ class WithEvalCell(nn.Cell):
 
     def construct(self, batch):
         start = time.time()
-        preds = self.model(batch['img'])
+        preds = self.model(batch['img'].expand_dims(0))
         boxes, scores = self.post_process(batch, preds, self.metric_cls.is_output_polygon)
-        total_frame += batch['img'].size()[0]
-        total_time += time.time() - start
+        self.total_frame += batch['img'].shape[0]
+        self.total_time += time.time() - start
 
         raw_metric = self.metric_cls.validate_measure(batch, (boxes, scores))
         return raw_metric
@@ -49,8 +49,8 @@ def eval():
     val_dataset = dataset.create_dict_iterator()
 
     ## Model
-    model = DBnet()
-    model_dict = mindspore.load_checkpoint('./checkpoints/DBnet/DBnet-1_63.ckpt')
+    model = DBnetPP()
+    model_dict = mindspore.load_checkpoint('./checkpoints/DBnetPP/DBnetPP-19_63.ckpt')
     mindspore.load_param_into_net(model, model_dict)
 
     ## Eval Network

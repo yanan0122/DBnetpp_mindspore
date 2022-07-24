@@ -21,7 +21,7 @@ train:
       checkpoints: './checkpoints'
       is_icdar2015: True
       is_transform: True
-      is_show: False
+      is_show: True
       train_img_format: '.jpg'
       train_img_dir: "./data/train_images/"
       train_gt_dir: "./data/train_gts/"

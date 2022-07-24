@@ -4,14 +4,13 @@ import glob
 import cv2
 import os
 import yaml
-import copy
 import pathlib
 
 from mindspore.dataset.vision.py_transforms import RandomColorAdjust, ToTensor, Normalize
 
-from .random_thansform import RandomAugment
-from .make_seg_map import MakeSegDetectionData
-from .make_border_map import MakeBorderMap
+from random_thansform import RandomAugment
+from make_seg_map import MakeSegDetectionData
+from make_border_map import MakeBorderMap
 
 
 def get_img(img_path):
@@ -116,7 +115,7 @@ class DataLoader():
         gt_path = self.gt_paths[index]
 
         img = get_img(img_path)
-        polys, dontcare = get_bboxes(gt_path,self.config)
+        polys, dontcare = get_bboxes(gt_path, self.config)
 
         if self.config['train']['is_transform'] and self.isTrain:
             img, polys = self.ra.random_scale(img, polys, 640)
@@ -124,21 +123,17 @@ class DataLoader():
             img, polys = self.ra.random_flip(img, polys)
             img, polys, dontcare = self.ra.random_crop_db(img, polys, dontcare)
         else:
-            img, polys = self.ra.random_scale(img, polys, 640)
-            img, polys = self.ra.random_rotate(img, polys, self.config['train']['radom_angle'])
-            img, polys = self.ra.random_flip(img, polys)
-            img, polys, dontcare = self.ra.random_crop_db(img, polys, dontcare)
-        # TODO: 完善分支
+            img, polys = self.ra.rescale(img, polys)
 
         img, gt, gt_mask = self.ms.process(img, polys, dontcare)
         img, thresh_map, thresh_mask = self.mb.process(img, polys, dontcare)
 
-        if self.config['train']['is_show'] and self.isTrain:
-            cv2.imwrite('img.jpg',img)
-            cv2.imwrite('gt.jpg',gt[0]*255)
-            cv2.imwrite('gt_mask.jpg',gt_mask[0]*255)
-            cv2.imwrite('thresh_map.jpg',thresh_map*255)
-            cv2.imwrite('thresh_mask.jpg',thresh_mask*255)
+        if self.config['train']['is_show']:
+            cv2.imwrite('./img.jpg', img)
+            cv2.imwrite('./gt.jpg', gt[0]*255)
+            cv2.imwrite('./gt_mask.jpg', gt_mask[0]*255)
+            cv2.imwrite('./thresh_map.jpg', thresh_map*255)
+            cv2.imwrite('./thresh_mask.jpg', thresh_mask*255)
 
         if self.config['train']['is_transform'] and self.isTrain:
             img = Image.fromarray(img)
@@ -164,4 +159,4 @@ if __name__ == '__main__':
     config = yaml.load(stream, Loader=yaml.FullLoader)
     stream.close()
     data_loader = DataLoader(config, False)
-    print(data_loader[1][0].shape)
+    print(data_loader[2][0].shape)

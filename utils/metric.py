@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import os
 from shapely.geometry import Polygon
 from collections import namedtuple
 
@@ -41,37 +42,12 @@ class DetectionIoUEvaluator:
         def get_intersection(pD, pG):
             return Polygon(pD).intersection(Polygon(pG)).area
 
-        def compute_ap(confList, matchList, numGtCare):
-            correct = 0
-            AP = 0
-            if len(confList) > 0:
-                confList = np.array(confList)
-                matchList = np.array(matchList)
-                sorted_ind = np.argsort(-confList)
-                confList = confList[sorted_ind]
-                matchList = matchList[sorted_ind]
-                for n in range(len(confList)):
-                    match = matchList[n]
-                    if match:
-                        correct += 1
-                        AP += float(correct) / (n + 1)
-
-                if numGtCare > 0:
-                    AP /= numGtCare
-
-            return AP
-
         perSampleMetrics = {}
 
         matchedSum = 0
 
-        Rectangle = namedtuple('Rectangle', 'xmin ymin xmax ymax')
-
         numGlobalCareGt = 0
         numGlobalCareDet = 0
-
-        arrGlobalConfidences = []
-        arrGlobalMatches = []
 
         recall = 0
         precision = 0
@@ -95,15 +71,11 @@ class DetectionIoUEvaluator:
         pairs = []
         detMatchedNums = []
 
-        arrSampleConfidences = []
-        arrSampleMatch = []
-
         evaluationLog = ""
 
         for n in range(len(gt)):
             points = gt[n]['points']
             # transcription = gt[n]['text']
-            dontCare = gt[n]['ignore']
 
             if not Polygon(points).is_valid or not Polygon(points).is_simple:
                 continue
@@ -111,8 +83,6 @@ class DetectionIoUEvaluator:
             gtPol = points
             gtPols.append(gtPol)
             gtPolPoints.append(points)
-            if dontCare:
-                gtDontCarePolsNum.append(len(gtPols) - 1)
 
         evaluationLog += "GT polygons: " + str(len(gtPols)) + (" (" + str(len(
             gtDontCarePolsNum)) + " don't care)\n" if len(gtDontCarePolsNum) > 0 else "\n")
@@ -267,13 +237,12 @@ class QuadMeasurer:
         output: (polygons, ...)
         '''
         results = []
-        gt_polyons_batch = batch['polygons']
-        ignore_tags_batch = batch['ignore_tags']
+        gt_polyons_batch = batch['gt_masks']
         pred_polygons_batch = np.array(output[0])
         pred_scores_batch = np.array(output[1])
-        for polygons, pred_polygons, pred_scores, ignore_tags in \
-                zip(gt_polyons_batch, pred_polygons_batch, pred_scores_batch, ignore_tags_batch):
-            gt = [dict(points=polygons[i], ignore=ignore_tags[i])
+        for polygons, pred_polygons, pred_scores in \
+                zip(gt_polyons_batch, pred_polygons_batch, pred_scores_batch):
+            gt = [dict(points=polygons[i])
                   for i in range(len(polygons))]
             if is_output_polygon:
                 pred = [dict(points=pred_polygons[i])
@@ -337,12 +306,11 @@ class QuadMetric():
         output: (polygons, ...)
         '''
         results = []
-        gt_polyons_batch = batch['text_polys']
-        ignore_tags_batch = batch['ignore_tags']
+        gt_polygons_batch = batch['gt_masks']
         pred_polygons_batch = np.array(output[0])
         pred_scores_batch = np.array(output[1])
-        for polygons, pred_polygons, pred_scores, ignore_tags in zip(gt_polyons_batch, pred_polygons_batch, pred_scores_batch, ignore_tags_batch):
-            gt = [dict(points=np.int64(polygons[i]), ignore=ignore_tags[i]) for i in range(len(polygons))]
+        for polygons, pred_polygons, pred_scores in zip(gt_polygons_batch, pred_polygons_batch, pred_scores_batch):
+            gt = [dict(points=np.int64(polygons[i])) for i in range(len(polygons))]
             if self.is_output_polygon:
                 pred = [dict(points=pred_polygons[i]) for i in range(len(pred_polygons))]
             else:

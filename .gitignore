@@ -147,3 +147,4 @@ run
 dbnet/.idea
 checkpoints
 data/t*
+*.jpg

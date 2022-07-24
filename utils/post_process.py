@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from shapely.geometry import Polygon
 import pyclipper
+import mindspore.ops as ops
 
 
 class SegDetectorRepresenter():
@@ -12,7 +13,7 @@ class SegDetectorRepresenter():
         self.max_candidates = max_candidates
         self.unclip_ratio = unclip_ratio
 
-    def __call__(self, batch, pred, is_output_polygon=False):
+    def __call__(self, batch, pred, is_output_polygon=False, dest='binary'):
         '''
         batch: (image, polygons, ignore_tags
         batch: a dict produced by dataloaders.
@@ -26,16 +27,18 @@ class SegDetectorRepresenter():
             thresh: [if exists] thresh hold prediction with shape (N, H, W)
             thresh_binary: [if exists] binarized with threshhold, (N, H, W)
         '''
-        pred = pred[:, 0, :, :]
+        pred = pred[dest][:, 0, :, :]
         segmentation = self.binarize(pred)
         boxes_batch = []
         scores_batch = []
-        for batch_index in range(pred.size(0)):
-            height, width = batch['shape'][batch_index]
+        for batch_index in range(pred.shape[0]):
+            height, width = pred.shape[1:]
             if is_output_polygon:
-                boxes, scores = self.polygons_from_bitmap(pred[batch_index], segmentation[batch_index], width, height)
+                boxes, scores = self.polygons_from_bitmap(pred[batch_index], segmentation[batch_index],
+                                                          width, height)
             else:
-                boxes, scores = self.boxes_from_bitmap(pred[batch_index], segmentation[batch_index], width, height)
+                boxes, scores = self.boxes_from_bitmap(pred[batch_index], segmentation[batch_index],
+                                                       width, height)
             boxes_batch.append(boxes)
             scores_batch.append(scores)
         return boxes_batch, scores_batch
@@ -50,8 +53,9 @@ class SegDetectorRepresenter():
         '''
 
         assert len(_bitmap.shape) == 2
-        bitmap = _bitmap.cpu().numpy()  # The first channel
-        pred = pred.cpu().detach().numpy()
+        bitmap = _bitmap.asnumpy()  # The first channel
+        pred = ops.stop_gradient(pred)
+        pred = pred.asnumpy()
         height, width = bitmap.shape
         boxes = []
         scores = []
@@ -99,8 +103,9 @@ class SegDetectorRepresenter():
         '''
 
         assert len(_bitmap.shape) == 2
-        bitmap = _bitmap.cpu().numpy()  # The first channel
-        pred = pred.cpu().detach().numpy()
+        bitmap = _bitmap.asnumpy()  # The first channel
+        pred = ops.stop_gradient(pred)
+        pred = pred.asnumpy()
         height, width = bitmap.shape
         contours, _ = cv2.findContours((bitmap * 255).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         num_contours = min(len(contours), self.max_candidates)
