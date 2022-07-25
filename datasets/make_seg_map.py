@@ -24,8 +24,7 @@ class MakeSegDetectionData():
         '''
         h, w = img.shape[:2]
         if self.is_training:
-            polys, dontcare = self.validate_polygons(
-                polys, dontcare, h, w)
+            polys, dontcare = self.validate_polygons(polys, dontcare, h, w)
         gt = np.zeros((1, h, w), dtype=np.float32)
         mask = np.ones((h, w), dtype=np.float32)
         for i in range(len(polys)):
@@ -33,8 +32,7 @@ class MakeSegDetectionData():
             height = max(polygon[:, 1]) - min(polygon[:, 1])
             width = max(polygon[:, 0]) - min(polygon[:, 0])
             if dontcare[i] or min(height, width) < self.min_text_size:
-                cv2.fillPoly(mask, polygon.astype(
-                    np.int32)[np.newaxis, :, :], 0)
+                cv2.fillPoly(mask, polygon.astype(np.int32)[np.newaxis, :, :], 0)
                 dontcare[i] = True
             else:
                 polygon_shape = Polygon(polygon)
@@ -42,12 +40,10 @@ class MakeSegDetectionData():
                            (1 - np.power(self.shrink_ratio, 2)) / polygon_shape.length
                 subject = [tuple(l) for l in polys[i]]
                 padding = pyclipper.PyclipperOffset()
-                padding.AddPath(subject, pyclipper.JT_ROUND,
-                                pyclipper.ET_CLOSEDPOLYGON)
+                padding.AddPath(subject, pyclipper.JT_ROUND, pyclipper.ET_CLOSEDPOLYGON)
                 shrinked = padding.Execute(-distance)
                 if shrinked == []:
-                    cv2.fillPoly(mask, polygon.astype(
-                        np.int32)[np.newaxis, :, :], 0)
+                    cv2.fillPoly(mask, polygon.astype( np.int32)[np.newaxis, :, :], 0)
                     dontcare[i] = True
                     continue
                 shrinked = np.array(shrinked[0]).reshape(-1, 2)
@@ -61,6 +57,7 @@ class MakeSegDetectionData():
         if len(polygons) == 0:
             return polygons, ignore_tags
         assert len(polygons) == len(ignore_tags)
+
         for polygon in polygons:
             polygon[:, 0] = np.clip(polygon[:, 0], 0, w - 1)
             polygon[:, 1] = np.clip(polygon[:, 1], 0, h - 1)

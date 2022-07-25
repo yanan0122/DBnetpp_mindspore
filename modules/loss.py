@@ -24,7 +24,7 @@ class L1BalanceCELoss(nn.Cell):
     Note: The meaning of inputs can be figured out in `SegDetectorLossBuilder`.
     '''
 
-    def __init__(self, eps=1e-6, l1_scale=10, bce_scale=5):
+    def __init__(self, eps=1e-6, l1_scale=10, bce_scale=1):
         super(L1BalanceCELoss, self).__init__()
 
         self.dice_loss = DiceLoss(eps=eps)
@@ -36,18 +36,13 @@ class L1BalanceCELoss(nn.Cell):
 
     def construct(self, pred, gt, gt_mask, thresh_map, thresh_mask):
 
-        bce_loss_output = self.bce_loss(pred['binary'], gt, gt_mask, False)
+        bce_loss_output = self.bce_loss(pred['binary'], gt, gt_mask)
 
         if 'thresh' in pred:
-
             l1_loss = self.l1_loss(pred['thresh'], thresh_map, thresh_mask)
-
             dice_loss = self.dice_loss(pred['thresh_binary'], gt, gt_mask)
-
             loss = dice_loss + self.l1_scale * l1_loss + bce_loss_output * self.bce_scale
-
         else:
-
             loss = bce_loss_output
 
         return loss
@@ -113,7 +108,7 @@ class BalanceCrossEntropyLoss(nn.Cell):
         self.topk = ops.TopK(sorted=True)
         self.K = 100
 
-    def construct(self, pred, gt, mask, return_origin=False):
+    def construct(self, pred, gt, mask):
 
         '''
         Args:

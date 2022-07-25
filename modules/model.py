@@ -1,4 +1,5 @@
 import time
+from mindspore import PYNATIVE_MODE
 import numpy as np
 import yaml
 
@@ -6,6 +7,8 @@ from mindspore.train.callback import Callback
 import mindspore.nn as nn
 import mindspore.dataset as ds
 
+import sys
+sys.path.append('.')
 import modules.backbone as backbone
 import modules.detector as detector
 from utils.post_process import SegDetectorRepresenter
@@ -15,11 +18,11 @@ from datasets.load import DataLoader
 
 class DBnet(nn.Cell):
 
-    def __init__(self):
-        super(DBnet, self).__init__()
+    def __init__(self, isTrain=True):
+        super(DBnet, self).__init__(auto_prefix=False)
 
         self.resnet = backbone.deformable_resnet18()
-        self.segdetector = detector.SegDetector()
+        self.segdetector = detector.SegDetector(training=isTrain, smooth=True)
 
     def construct(self, img):
         pred = self.resnet(img)
@@ -29,11 +32,11 @@ class DBnet(nn.Cell):
 
 
 class DBnetPP(nn.Cell):
-    def __init__(self):
+    def __init__(self, isTrain=True):
         super(DBnetPP, self).__init__(auto_prefix=False)
 
-        self.resnet = backbone.resnet18()
-        self.segdetector = detector.SegDetectorPP()
+        self.resnet = backbone.deformable_resnet18()
+        self.segdetector = detector.SegDetectorPP(training=isTrain, smooth=True)
 
     def construct(self, img):
         pred = self.resnet(img)
@@ -210,3 +213,24 @@ class LossCallBack_new(Callback):
     #                                                         is_output_polygon=self.args['train']['polygon'],
     #                                                         box_thresh=self.args['train']['box_thresh'])
     #         raw_metrics.append(raw_metric)
+
+
+if __name__ == '__main__':
+    from loss import L1BalanceCELoss
+    from mindspore import context
+    context.set_context(mode=PYNATIVE_MODE)
+
+    network = DBnetPP()
+    criterion = L1BalanceCELoss()
+    model = WithLossCell(network, criterion)
+    stream = open('./config.yaml', 'r', encoding='utf-8')
+    config = yaml.load(stream, Loader=yaml.FullLoader)
+    stream.close()
+    data_loader = DataLoader(config, isTrain=True)
+    import mindspore.dataset as ds
+    train_dataset = ds.GeneratorDataset(data_loader, ['img', 'gts', 'gt_masks', 'thresh_maps', 'thresh_masks'])
+    train_dataset = train_dataset.batch(config['train']['batch_size'])
+    it = train_dataset.create_tuple_iterator()
+    data = next(it)
+    loss = model(*data)
+    print(loss)

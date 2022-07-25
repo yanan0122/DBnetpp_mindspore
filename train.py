@@ -36,7 +36,7 @@ def train():
     # default batch size 16. dataset size 63.
 
     ## Network
-    network = DBnetPP()
+    network = DBnet(isTrain=True)
     # pretrained_weights = load_checkpoint(config['train']['resume'])
     # load_param_into_net(network.resnet, pretrained_weights)
 
@@ -48,13 +48,13 @@ def train():
 
     ## Train
     config_ck = CheckpointConfig(save_checkpoint_steps=63, keep_checkpoint_max=10)
-    ckpoint = ModelCheckpoint(prefix="DBnetPP", directory="./checkpoints/DBnetPP/", config=config_ck)
+    ckpoint = ModelCheckpoint(prefix="DBnet", directory="./checkpoints/DBnet/", config=config_ck)
     model.train(config['train']['n_epoch'], train_dataset, dataset_sink_mode=False,
                 callbacks=[LossMonitor(), LearningRateScheduler(learning_rate_function), ckpoint])
 
 
 if __name__ == '__main__':
-    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=3)
+    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=7)
     train()
     print("Train has completed.")
 
