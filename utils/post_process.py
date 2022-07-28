@@ -13,15 +13,13 @@ class SegDetectorRepresenter():
         self.max_candidates = max_candidates
         self.unclip_ratio = unclip_ratio
 
-    def __call__(self, batch, pred, is_output_polygon=False, dest='binary'):
+    def __call__(self, pred, is_output_polygon=False, dest='binary'):
         '''
         batch: (image, polygons, ignore_tags
         batch: a dict produced by dataloaders.
             image: tensor of shape (N, C, H, W).
             polygons: tensor of shape (N, K, 4, 2), the polygons of objective regions.
             ignore_tags: tensor of shape (N, K), indicates whether a region is ignorable or not.
-            shape: the original shape of images.
-            filename: the original filenames of images.
         pred:
             binary: text region segmentation map, with shape (N, H, W)
             thresh: [if exists] thresh hold prediction with shape (N, H, W)

@@ -1,9 +1,6 @@
 import numpy as np
 import cv2
-import os
 from shapely.geometry import Polygon
-from collections import namedtuple
-
 
 
 class AverageMeter:
@@ -232,12 +229,10 @@ class QuadMeasurer:
             image: tensor of shape (N, C, H, W).
             polygons: tensor of shape (N, K, 4, 2), the polygons of objective regions.
             ignore_tags: tensor of shape (N, K), indicates whether a region is ignorable or not.
-            shape: the original shape of images.
-            filename: the original filenames of images.
         output: (polygons, ...)
         '''
         results = []
-        gt_polyons_batch = batch['gt_masks']
+        gt_polyons_batch = batch['gts']
         pred_polygons_batch = np.array(output[0])
         pred_scores_batch = np.array(output[1])
         for polygons, pred_polygons, pred_scores in \
@@ -296,31 +291,25 @@ class QuadMetric():
 
     def measure(self, batch, output, box_thresh=0.6):
         '''
-        batch: (image, polygons, ignore_tags
-        batch: a dict produced by dataloaders.
+        batch: (image, polygons, ignore_tags)
             image: tensor of shape (N, C, H, W).
-            polygons: tensor of shape (N, K, 4, 2), the polygons of objective regions.
-            ignore_tags: tensor of shape (N, K), indicates whether a region is ignorable or not.
-            shape: the original shape of images.
-            filename: the original filenames of images.
+            polys: tensor of shape (N, K, 4, 2), the polygons of objective regions.
+            dontcare: tensor of shape (N, K), indicates whether a region is ignorable or not.
         output: (polygons, ...)
         '''
         results = []
-        gt_polygons_batch = batch['gt_masks']
-        pred_polygons_batch = np.array(output[0])
+        gt_polys_batch = batch['polys']
+        pred_polys_batch = np.array(output[0])
         pred_scores_batch = np.array(output[1])
-        for polygons, pred_polygons, pred_scores in zip(gt_polygons_batch, pred_polygons_batch, pred_scores_batch):
-            gt = [dict(points=np.int64(polygons[i])) for i in range(len(polygons))]
+        for polys, pred_polys, pred_scores in zip(gt_polys_batch, pred_polys_batch, pred_scores_batch):
+            gt = [dict(points=np.int64(polys[i])) for i in range(len(polys))]
             if self.is_output_polygon:
-                pred = [dict(points=pred_polygons[i]) for i in range(len(pred_polygons))]
+                pred = [dict(points=pred_polys[i]) for i in range(len(pred_polys))]
             else:
                 pred = []
-                # print(pred_polygons.shape)
-                for i in range(pred_polygons.shape[0]):
+                for i in range(pred_polys.shape[0]):
                     if pred_scores[i] >= box_thresh:
-                        # print(pred_polygons[i,:,:].tolist())
-                        pred.append(dict(points=pred_polygons[i, :, :].astype(np.int32)))
-                # pred = [dict(points=pred_polygons[i,:,:].tolist()) if pred_scores[i] >= box_thresh for i in range(pred_polygons.shape[0])]
+                        pred.append(dict(points=pred_polys[i, :, :].astype(np.int32)))
             results.append(self.evaluator.evaluate_image(gt, pred))
         return results
 

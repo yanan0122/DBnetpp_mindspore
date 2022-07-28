@@ -92,8 +92,12 @@ class DataLoader():
         else:
             img, polys = self.ra.rescale(img, polys)
 
-        img, gt, gt_mask = self.ms.process(img, polys, dontcare)
-        img, thresh_map, thresh_mask = self.mb.process(img, polys, dontcare)
+        if self.isTrain:
+            img, gt, gt_mask = self.ms.process(img, polys, dontcare)
+            img, thresh_map, thresh_mask = self.mb.process(img, polys, dontcare)
+        else:
+            polys = np.stack(polys, 0)
+            dontcare = np.array(dontcare, dtype=np.bool8)
 
         if self.config['general']['is_show']:
             cv2.imwrite('./img.jpg', img)
@@ -102,7 +106,7 @@ class DataLoader():
             cv2.imwrite('./thresh_map.jpg', thresh_map*255)
             cv2.imwrite('./thresh_mask.jpg', thresh_mask*255)
 
-        if self.config['train']['is_transform'] and self.isTrain:
+        if self.isTrain and self.config['train']['is_transform']:
             img = Image.fromarray(img)
             img = img.convert('RGB')
             colorjitter = RandomColorAdjust(brightness=32.0 / 255, saturation=0.5)
@@ -115,20 +119,39 @@ class DataLoader():
         img = ToTensor()(img)
         img = Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))(img)
 
-        # img = img.reshape((1,3,640,640))
-        # print("load img shape ", img.shape)
+        if self.isTrain:
+            return img, gt, gt_mask, thresh_map, thresh_mask
+        else:
+            return img, polys, dontcare
 
-        return img, gt, gt_mask, thresh_map, thresh_mask
+    def get_tags(self, index):
+        img_path = self.img_paths[index]
+        gt_path = self.gt_paths[index]
+
+        img = get_img(img_path)
+        polys, dontcare = get_bboxes(gt_path, self.config)
+
+        if self.isTrain and self.config['train']['is_transform']:
+            img, polys = self.ra.random_scale(img, polys, 640)
+            img, polys = self.ra.random_rotate(img, polys, self.config['train']['random_angle'])
+            img, polys = self.ra.random_flip(img, polys)
+            img, polys, dontcare = self.ra.random_crop_db(img, polys, dontcare)
+        else:
+            img, polys = self.ra.rescale(img, polys)
+
+        return img, polys, dontcare
 
 
 if __name__ == '__main__':
     stream = open('./config.yaml', 'r', encoding='utf-8')
     config = yaml.load(stream, Loader=yaml.FullLoader)
     stream.close()
-    data_loader = DataLoader(config, isTrain=True)
+    data_loader = DataLoader(config, isTrain=False)
     import mindspore.dataset as ds
-    train_dataset = ds.GeneratorDataset(data_loader, ['img', 'gts', 'gt_masks', 'thresh_maps', 'thresh_masks'])
-    train_dataset = train_dataset.batch(config['train']['batch_size'])
+    train_dataset = ds.GeneratorDataset(data_loader, ['img', 'polys', 'dontcare'])
+    train_dataset = train_dataset.batch(1)
     it = train_dataset.create_dict_iterator()
     test = next(it)
-    print(test['img'].shape, test['gts'].shape, test['gt_masks'].shape)
+    print(test['img'].shape, test['polys'].shape, test['dontcare'].shape)
+    # sam = data_loader[19]
+    # print(sam[0].shape, len(sam[1]), sam[2])

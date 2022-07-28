@@ -148,3 +148,4 @@ dbnet/.idea
 checkpoints
 data/t*
 *.jpg
+test_np

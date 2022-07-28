@@ -1,5 +1,6 @@
 import time
 import yaml
+from tqdm.auto import tqdm
 
 import mindspore
 from mindspore import Tensor, context
@@ -28,16 +29,27 @@ class WithEvalCell(nn.Cell):
 
     def construct(self, batch):
         start = time.time()
-        preds = self.model(batch['img'].expand_dims(0))
-        boxes, scores = self.post_process(batch, preds, self.metric_cls.is_output_polygon)
+        if batch['img'].ndim == 3:
+            preds = self.model(batch['img'].expand_dims(0))
+        else:
+            preds = self.model(batch['img'])
+        boxes, scores = self.post_process(preds, self.metric_cls.is_output_polygon)
         self.total_frame += batch['img'].shape[0]
         self.total_time += time.time() - start
 
         raw_metric = self.metric_cls.validate_measure(batch, (boxes, scores))
         return raw_metric
 
+    def eval(self, dataset):
+        for batch in tqdm(dataset):
+            raw_metric = self(batch)
+            self.raw_metrics.append(raw_metric)
+        metrics = self.metric_cls.gather_measure(self.raw_metrics)
+        print(f'FPS: {self.total_frame / self.total_time}')
+        print(metrics['recall'].avg, metrics['precision'].avg, metrics['fmeasure'].avg)
 
-def eval():
+
+def eval(model: nn.Cell, path: str):
     ## Config
     stream = open('config.yaml', 'r', encoding='utf-8')
     config = yaml.load(stream, Loader=yaml.FullLoader)
@@ -45,28 +57,20 @@ def eval():
 
     ## Dataset
     data_loader = DataLoader(config, isTrain=False)
-    dataset = ds.GeneratorDataset(data_loader, ['img', 'gts', 'gt_masks', 'thresh_maps', 'thresh_masks'])
-    val_dataset = dataset.create_dict_iterator()
+    val_dataset = ds.GeneratorDataset(data_loader, ['img', 'polys', 'dontcare'])
+    val_dataset = val_dataset.batch(1)
+    dataset = val_dataset.create_dict_iterator()
 
     ## Model
-    model = DBnetPP()
-    model_dict = mindspore.load_checkpoint('./checkpoints/DBnetPP/DBnetPP-19_63.ckpt')
+    model_dict = mindspore.load_checkpoint(path)
     mindspore.load_param_into_net(model, model_dict)
 
-    ## Eval Network
+    ## Eval
     eval_net = WithEvalCell(model, val_dataset)
     eval_net.set_train(False)
-
-    ## eval
-    raw_metrics = []
-    for batch in val_dataset:
-        raw_metric = eval_net(batch)
-        raw_metrics.append(raw_metric)
-    metrics = eval_net.metric_cls.gather_measure(eval_net.raw_metrics)
-    print(f'FPS: {eval_net.total_frame / eval_net.total_time}')
-    print(metrics['recall'].avg, metrics['precision'].avg, metrics['fmeasure'].avg)
+    eval_net.eval(dataset)
 
 
 if __name__ == '__main__':
-    context.set_context(mode=context.PYNATIVE_MODE, device_target="Ascend", device_id=7)
-    eval()
+    context.set_context(mode=context.PYNATIVE_MODE, device_target="Ascend", device_id=4)
+    eval(DBnet(), './checkpoints/DBnet/DBnet-19_63.ckpt')

@@ -62,7 +62,7 @@ class WithLossCell(nn.Cell):
 
     def construct(self, img, gt, gt_mask, thresh_map, thresh_mask):
         pred = self._backbone(img)
-
+        # print(pred)
         loss = self._loss_fn(pred, gt, gt_mask, thresh_map, thresh_mask)
 
         return loss
@@ -218,7 +218,7 @@ class LossCallBack_new(Callback):
 if __name__ == '__main__':
     from loss import L1BalanceCELoss
     from mindspore import context
-    context.set_context(mode=PYNATIVE_MODE)
+    context.set_context(mode=context.PYNATIVE_MODE, device_target="Ascend", device_id=6)
 
     network = DBnetPP()
     criterion = L1BalanceCELoss()
@@ -233,4 +233,4 @@ if __name__ == '__main__':
     it = train_dataset.create_tuple_iterator()
     data = next(it)
     loss = model(*data)
-    print(loss)
+    print(loss.shape)
