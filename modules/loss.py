@@ -75,8 +75,9 @@ class DiceLoss(nn.Cell):
 
 class MaskL1Loss(nn.Cell):
 
-    def __init__(self):
+    def __init__(self, eps=1e-6):
         super(MaskL1Loss, self).__init__()
+        self.eps = eps
 
     def construct(self, pred, gt, mask):
         mask_sum = mask.sum()
@@ -185,14 +186,25 @@ def test_new():
 
     # negative_count = min(negative_count, (positive_count * 3.0).astype(ms.int32))
 
-    BCEloss = BalanceCrossEntropyLoss()
-    bceloss = BCEloss.construct(shrink_maps, gt, mask)
+    # bceloss test
+    # BCEloss = BalanceCrossEntropyLoss()
+    # bceloss = BCEloss.construct(shrink_maps, gt, mask)
+
     # x = bceloss
     # x = x.reshape((1))
     # x = x.asnumpy()[0]
+
+    # MaskL1Loss test
+    MaskL1loss = MaskL1Loss()
+    MLloss = MaskL1loss.construct(threshold_maps, gt, mask)
+
+    # DiceLoss test
+    Diceloss = DiceLoss()
+    diceloss = Diceloss.construct(binary_maps, gt, mask)
 
     print("")
 
 
 if __name__ == '__main__':
+    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=6)
     test_new()
