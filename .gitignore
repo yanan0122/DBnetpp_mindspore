@@ -149,3 +149,4 @@ checkpoints
 data/t*
 *.jpg
 test_np
+eval.py

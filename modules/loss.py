@@ -4,7 +4,6 @@ from mindspore import Tensor, context, nn, ops
 import mindspore as ms
 from mindspore import Tensor, nn, ops, context
 
-
 # Input:
 #             pred: A dict which contains predictions.
 #                 thresh: The threshold prediction
@@ -76,10 +75,12 @@ class DiceLoss(nn.Cell):
 class MaskL1Loss(nn.Cell):
 
     def __init__(self, eps=1e-6):
+
         super(MaskL1Loss, self).__init__()
         self.eps = eps
 
     def construct(self, pred, gt, mask):
+
         mask_sum = mask.sum()
 
         loss = ((pred[:, 0] - gt).abs() * mask).sum() / mask_sum
@@ -99,6 +100,7 @@ class BalanceCrossEntropyLoss(nn.Cell):
     '''
 
     def __init__(self, negative_ratio=3.0, eps=1e-6):
+
         super(BalanceCrossEntropyLoss, self).__init__()
 
         self.negative_ratio = negative_ratio
@@ -106,8 +108,10 @@ class BalanceCrossEntropyLoss(nn.Cell):
         self.bceloss = nn.BCELoss()
         self.topk = ops.TopK(sorted=True)
         self.K = 100
+        self.min = ops.Minimum()
 
     def construct(self, pred, gt, mask):
+
         '''
         Args:
             pred: shape :math:`(N, 1, H, W)`, the prediction of network
@@ -117,26 +121,33 @@ class BalanceCrossEntropyLoss(nn.Cell):
 
         pos = (gt * mask)
         neg = (mask - pos)
-        positive_count = pos.sum().astype(ms.int32)
-        negative_count = neg.sum().astype(ms.int32)
+        
+        positive_count = pos.sum(keepdims=True)
+        negative_count = neg.sum(keepdims=True)
+        
+        negative_count = self.min(negative_count, positive_count * self.negative_ratio).astype(ms.int32)
 
-        negative_count = min(negative_count, (positive_count * self.negative_ratio).astype(ms.int32))
+        negative_count = int(negative_count)
 
-        loss = self.bceloss(pred, gt)[:, 0, :, :]
+        return negative_count
+
+        # # loss = self.bceloss(pred, gt)[:, 0, :, :]
         # loss = self.bceloss(pred, gt)
 
-        positive_loss = (loss * pos)
-        negative_loss = (loss * neg).view(-1)
-        negative_count = int(negative_count.reshape((1)).asnumpy()[0])
-        negative_loss, _ = self.topk(negative_loss, negative_count)
+        # positive_loss = (loss * pos)
+        # negative_loss = (loss * neg).view(-1)
+        # # negative_count = int(negative_count.view((1,1)).asnumpy()[0])
+        # negative_count = negative_count.item()
 
-        negative_loss = negative_loss[:negative_count]
+        # negative_loss, _ = self.topk(negative_loss, negative_count)
 
-        balance_loss = (positive_loss.sum() + negative_loss.sum()) / (positive_count + negative_count + self.eps)
+        # negative_loss = negative_loss[:negative_count]
 
-        return balance_loss
+        # balance_loss = (positive_loss.sum() + negative_loss.sum())/(positive_count + negative_count + self.eps)
 
+        # return balance_loss
 
+    
 def test_old():
     context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=5)
 
@@ -165,46 +176,45 @@ def test_old():
     # l1balanceloss = L1BalanceCELoss()
     # print(l1balanceloss.construct(pred_dict, gt, gt_mask, thresh_map, thresh_mask))
     print("")
-
+    
 
 def test_new():
-    pred = np.load("test_np/pred.npy")
+    
+    pred = np.load("/old/wlh/DBnetpp_mindspore/test_np/pred.npy")
     pred = Tensor(pred)
-    gt = np.load("test_np/gt.npy")
+    gt = np.load("/old/wlh/DBnetpp_mindspore/test_np/gt.npy")
     gt = Tensor(gt)
-    mask = np.load("test_np/mask.npy")
+    mask = np.load("/old/wlh/DBnetpp_mindspore/test_np/mask.npy")
     mask = Tensor(mask)
-
+    
     shrink_maps = pred[:, 0, :, :]
     threshold_maps = pred[:, 1, :, :]
     binary_maps = pred[:, 2, :, :]
-
+    
     # pos = (gt * mask)
     # neg = (mask - pos)
     # positive_count = pos.sum().astype(ms.int32)
     # negative_count = neg.sum().astype(ms.int32)
-
+    
     # negative_count = min(negative_count, (positive_count * 3.0).astype(ms.int32))
 
     # bceloss test
-    # BCEloss = BalanceCrossEntropyLoss()
-    # bceloss = BCEloss.construct(shrink_maps, gt, mask)
-
-    # x = bceloss
+    bceloss = BalanceCrossEntropyLoss()
+    loss = bceloss(shrink_maps, gt, mask)
+    print(loss)
+    
+    # x = y
     # x = x.reshape((1))
     # x = x.asnumpy()[0]
 
-    # MaskL1Loss test
-    MaskL1loss = MaskL1Loss()
-    MLloss = MaskL1loss.construct(threshold_maps, gt, mask)
-
-    # DiceLoss test
-    Diceloss = DiceLoss()
-    diceloss = Diceloss.construct(binary_maps, gt, mask)
-
-    print("")
-
-
+    # # MaskL1Loss test
+    # MaskL1loss = MaskL1Loss()
+    # MLloss = MaskL1loss(threshold_maps, gt, mask)
+    
+    # # DiceLoss test
+    # Diceloss = DiceLoss()
+    # diceloss = Diceloss(binary_maps, gt, mask)
+        
 if __name__ == '__main__':
-    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=6)
+    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=5)
     test_new()

@@ -165,8 +165,7 @@ class LossCallBack_new(Callback):
 
         self.SegDetectorRepresenter = SegDetectorRepresenter(thresh=self.arg['train']['thresh'],
                                                              box_thresh=self.arg['train']['box_thresh'],
-                                                             max_candidates=self.arg['train']['max_candidates'],
-                                                             dest=self.arg['train']['dest'])
+                                                             max_candidates=self.arg['train']['max_candidates'])
         self.QuadMeasurer = QuadMeasurer()
 
     def step_end(self, run_context):
@@ -218,9 +217,9 @@ class LossCallBack_new(Callback):
 if __name__ == '__main__':
     from loss import L1BalanceCELoss
     from mindspore import context
-    context.set_context(mode=context.PYNATIVE_MODE, device_target="Ascend", device_id=6)
+    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=6)
 
-    network = DBnetPP()
+    network = DBnet()
     criterion = L1BalanceCELoss()
     model = WithLossCell(network, criterion)
     stream = open('./config.yaml', 'r', encoding='utf-8')
@@ -232,5 +231,5 @@ if __name__ == '__main__':
     train_dataset = train_dataset.batch(config['train']['batch_size'])
     it = train_dataset.create_tuple_iterator()
     data = next(it)
-    loss = model(*data)
-    print(loss.shape)
+    pred = network(data[0])
+    print(pred[0].shape, pred[1].shape, pred[2])

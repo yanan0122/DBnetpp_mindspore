@@ -148,7 +148,7 @@ class SegDetector(nn.Cell):
 
         # this is the pred module, not binarization module;
         # We do not correct the name due to the trained model.
-        binary = self.binarize(fuse)
+        binary = self.binarize(fuse)    # FIXME: 全部为0
 
         pred = {}
 
@@ -160,7 +160,7 @@ class SegDetector(nn.Cell):
             pred['thresh'] = thresh
             pred['thresh_binary'] = self.step_function(binary, thresh)
 
-        return pred  # pred是个字典，有三张图
+        return pred
 
     def step_function(self, x, y):
         """

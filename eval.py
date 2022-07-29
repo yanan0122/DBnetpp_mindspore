@@ -29,10 +29,7 @@ class WithEvalCell(nn.Cell):
 
     def construct(self, batch):
         start = time.time()
-        if batch['img'].ndim == 3:
-            preds = self.model(batch['img'].expand_dims(0))
-        else:
-            preds = self.model(batch['img'])
+        preds = self.model(batch['img'])
         boxes, scores = self.post_process(preds, self.metric_cls.is_output_polygon)
         self.total_frame += batch['img'].shape[0]
         self.total_time += time.time() - start
@@ -72,5 +69,5 @@ def eval(model: nn.Cell, path: str):
 
 
 if __name__ == '__main__':
-    context.set_context(mode=context.PYNATIVE_MODE, device_target="Ascend", device_id=4)
-    eval(DBnet(), './checkpoints/DBnet/DBnet-19_63.ckpt')
+    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=5)
+    eval(DBnet(False), './checkpoints/DBnet/DBnet-19_63.ckpt')
