@@ -71,7 +71,7 @@ class DetectionIoUEvaluator:
         evaluationLog = ""
 
         for n in range(len(gt)):
-            points = gt[n]['points'].asnumpy()
+            points = gt[n]['points']
             # transcription = gt[n]['text']
 
             if not Polygon(points).is_valid or not Polygon(points).is_simple:
@@ -85,7 +85,7 @@ class DetectionIoUEvaluator:
             gtDontCarePolsNum)) + " don't care)\n" if len(gtDontCarePolsNum) > 0 else "\n")
 
         for n in range(len(pred)):
-            points = pred[n]['points'].asnumpy()
+            points = pred[n]['points']
             if not Polygon(points).is_valid or not Polygon(points).is_simple:
                 continue
 
@@ -232,18 +232,18 @@ class QuadMetric():
         output: (polygons, ...)
         '''
         results = []
-        gt_polys = batch['polys'].astype(np.float32)
+        gt_polys = batch['polys'].asnumpy().astype(np.float32)
         pred_polys = np.array(output[0])
         pred_scores = np.array(output[1])
         for i in range(len(gt_polys)):
-            gt = [dict(points=gt_polys[i][j].astype(np.int32)) for j in range(len(gt_polys[i]))]
+            gt = [{'points': gt_polys[i][j]} for j in range(len(gt_polys[i]))]
             if self.is_output_polygon:
-                pred = [dict(points=pred_polys[i][j]) for j in range(len(pred_polys[i]))]
+                pred = [{'points': pred_polys[i][j]} for j in range(len(pred_polys[i]))]
             else:
                 pred = []
                 for j in range(pred_polys[i].shape[0]):
                     if pred_scores[i][j] >= box_thresh:
-                        pred.append(dict(points=pred_polys[i][j, :, :].astype(np.int32)))
+                        pred.append({'points': pred_polys[i][j, :, :].astype(np.int32)})
             results.append(self.evaluator.evaluate_image(gt, pred))
         return results
 
