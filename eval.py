@@ -23,28 +23,34 @@ class WithEvalCell(nn.Cell):
         self.metric_cls = QuadMetric()
         self.post_process = SegDetectorRepresenter()
 
-        self.total_frame = 0.0
-        self.total_time = 0.0
-        self.raw_metrics = []
-
-    def construct(self, batch):
+    def construct(self, batch,verbose=True):
         start = time.time()
-        preds = self.model(batch['img'])
-        boxes, scores = self.post_process(preds, self.metric_cls.is_output_polygon)
-        self.total_frame += batch['img'].shape[0]
-        self.total_time += time.time() - start
 
+        preds = self.model(batch['img'])
+        boxes, scores = self.post_process(preds, False)
         raw_metric = self.metric_cls.validate_measure(batch, (boxes, scores))
-        return raw_metric
+
+        cur_frame = batch['img'].shape[0]
+        cur_time = time.time() - start
+
+        if verbose:
+            return raw_metric, (cur_frame, cur_time)
+        else:
+            return raw_metric
 
     def eval(self, dataset):
-        for batch in tqdm(dataset):
-            raw_metric = self(batch)
-            self.raw_metrics.append(raw_metric)
-        metrics = self.metric_cls.gather_measure(self.raw_metrics)
-        print(f'FPS: {self.total_frame / self.total_time}')
-        print(metrics['recall'].avg, metrics['precision'].avg, metrics['fmeasure'].avg)
+        total_frame = 0.0
+        total_time = 0.0
+        raw_metrics = []
 
+        for batch in tqdm(dataset):
+            raw_metric, (cur_frame, cur_time) = self(batch)
+            self.raw_metrics.append(raw_metric)
+            total_frame += cur_frame
+            total_time += cur_time
+        metrics = self.metric_cls.gather_measure(raw_metrics)
+        print(f'FPS: {total_frame / total_time}')
+        print(metrics['recall'].avg, metrics['precision'].avg, metrics['fmeasure'].avg)
 
 def eval(model: nn.Cell, path: str):
     ## Config

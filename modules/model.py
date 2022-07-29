@@ -12,7 +12,7 @@ sys.path.append('.')
 import modules.backbone as backbone
 import modules.detector as detector
 from utils.post_process import SegDetectorRepresenter
-from utils.metric import QuadMeasurer, AverageMeter
+from utils.metric import AverageMeter, QuadMetric
 from datasets.load import DataLoader
 
 
@@ -166,7 +166,7 @@ class LossCallBack_new(Callback):
         self.SegDetectorRepresenter = SegDetectorRepresenter(thresh=self.arg['train']['thresh'],
                                                              box_thresh=self.arg['train']['box_thresh'],
                                                              max_candidates=self.arg['train']['max_candidates'])
-        self.QuadMeasurer = QuadMeasurer()
+        self.QuadMetric = QuadMetric()
 
     def step_end(self, run_context):
 
@@ -208,7 +208,7 @@ class LossCallBack_new(Callback):
     #     for i, batch in tqdm(enumerate(self.test_datasets), total=len(self.test_datasets)):
     #         pred = model(batch)
     #         output = self.SegDetectorRepresenter.represent(batch, pred, is_output_polygon=self.args['train']['polygon'])
-    #         raw_metric = self.QuadMeasurer.validate_measure(batch, output,
+    #         raw_metric = self.QuadMetric.validate_measure(batch, output,
     #                                                         is_output_polygon=self.args['train']['polygon'],
     #                                                         box_thresh=self.args['train']['box_thresh'])
     #         raw_metrics.append(raw_metric)
