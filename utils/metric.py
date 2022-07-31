@@ -218,7 +218,7 @@ class DetectionIoUEvaluator:
             return iou
 
 
-class QuadMetric():
+class QuadMetric:
     def __init__(self, is_output_polygon=False):
         self.is_output_polygon = is_output_polygon
         self.evaluator = DetectionIoUEvaluator(is_output_polygon=is_output_polygon)

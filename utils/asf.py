@@ -22,6 +22,8 @@ class ScaleFeatureSelection(nn.Cell):
         elif self.type == 'scale_channel':
             self.enhanced_attention = ScaleChannelAttention(inter_channels, inter_channels//2,
                                                             out_features_num)
+        else:
+            exit(1)
         self.interpolate = nn.ResizeBilinear()
 
     def weights_init(self, c):
@@ -41,7 +43,7 @@ class ScaleFeatureSelection(nn.Cell):
             exit(1)
         if self.type not in ['scale_channel_spatial', 'scale_spatial']:
             shape = features_list[0].shape[2:]
-            score = self.interpolate(score, size=shape)
+            score = self.interpolate(score, shape)
 
         x = []
         for i in range(self.out_features_num):
@@ -53,7 +55,7 @@ class ScaleFeatureSelection(nn.Cell):
 class ScaleChannelAttention(nn.Cell):
     def __init__(self, in_planes, out_planes, num_features, init_weight=True):
         super(ScaleChannelAttention, self).__init__()
-        self.avgpool = ops.ReduceMean()
+        self.avgpool = ops.ReduceMean(keep_dims=True)
         self.fc1 = nn.Conv2d(in_planes, out_planes, 1, has_bias=False)
         self.bn = nn.BatchNorm2d(out_planes)
         self.fc2 = nn.Conv2d(out_planes, num_features, 1, has_bias=False)
@@ -74,7 +76,7 @@ class ScaleChannelAttention(nn.Cell):
                 m.beta = init.initializer(1e-4, m.beta.shape)
 
     def construct(self, x):
-        global_x = self.avgpool(x)
+        global_x = self.avgpool(x, (-2, -1))
         global_x = self.fc1(global_x)
         global_x = self.relu(self.bn(global_x))
         global_x = self.fc2(global_x)
@@ -104,7 +106,7 @@ class ScaleChannelSpatialAttention(nn.Cell):
         )
         self.sigmoid = nn.Sigmoid()
         if init_weight:
-            self.weight_init()
+            self.weights_init()
 
     def weights_init(self):
         for m in self.cells():
@@ -120,12 +122,12 @@ class ScaleChannelSpatialAttention(nn.Cell):
     def construct(self, x):
         # global_x = self.avgpool(x)
         #shape Nx4x1x1
-        x = ops.ReduceMean(keep_dims=True)(x, axis=(-2, -1))
+        x = ops.ReduceMean(keep_dims=True)(x, (-2, -1))
         global_x = self.sigmoid(self.channel_wise(x))
         #shape: NxCxHxW
         global_x = global_x + x
         #shape:Nx1xHxW
-        x = ops.ReduceMean(keep_dims=True)(global_x, axis=1)
+        x = ops.ReduceMean(keep_dims=True)(global_x, 1)
         global_x = self.spatial_wise(x) + global_x
         global_x = self.attention_wise(global_x)
         return global_x
@@ -136,7 +138,7 @@ class ScaleSpatialAttention(nn.Cell):
         super(ScaleSpatialAttention, self).__init__()
         self.spatial_wise = nn.SequentialCell(
             #Nx1xHxW
-            nn.Conv2d(1, 1, 3, has_bias=False, padding=1),
+            nn.Conv2d(1, 1, 3, has_bias=False),
             nn.ReLU(),
             nn.Conv2d(1, 1, 1, has_bias=False),
             nn.Sigmoid()
@@ -159,8 +161,8 @@ class ScaleSpatialAttention(nn.Cell):
                 m.gamma = init.initializer('ones', m.gamma.shape)
                 m.beta = init.initializer(1e-4, m.beta.shape)
 
-    def forward(self, x):
-        global_x = ops.ReduceMean(keep_dims=True)(x, axis=1)
+    def construct(self, x):
+        global_x = ops.ReduceMean(keep_dims=True)(x, 1)
         global_x = self.spatial_wise(global_x) + x
         global_x = self.attention_wise(global_x)
         return global_x

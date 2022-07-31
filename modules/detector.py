@@ -7,6 +7,8 @@ import mindspore.nn as nn
 from mindspore.common.initializer import HeNormal
 from mindspore.common import initializer as init
 
+import sys
+sys.path.insert(0, '.')
 from utils.asf import ScaleFeatureSelection
 
 
@@ -250,7 +252,7 @@ if __name__ == "__main__":
     c4 = Tensor(c4, dtype=ms.float32)
     c5 = Tensor(c5, dtype=ms.float32)
 
-    segdetector = SegDetectorPP(adaptive=True, training=True)
+    segdetector = SegDetectorPP(adaptive=True, training=True, attention_type='scale_spatial')
     output = segdetector([c2, c3, c4, c5])
 
     print("segdetector output ", output[2].shape)   # 'thresh_binary'
