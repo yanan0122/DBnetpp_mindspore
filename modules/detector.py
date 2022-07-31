@@ -7,7 +7,7 @@ import mindspore.nn as nn
 from mindspore.common.initializer import HeNormal
 from mindspore.common import initializer as init
 
-from utils.asf import ASF
+from utils.asf import ScaleFeatureSelection
 
 
 class SegDetector(nn.Cell):
@@ -174,11 +174,13 @@ class SegDetector(nn.Cell):
 
 class SegDetectorPP(SegDetector):
     def __init__(self, in_channels=[64, 128, 256, 512], inner_channels=256, k=10,
-                 bias=False, adaptive=True, smooth=False, serial=False, training=False):
+                 bias=False, adaptive=True, smooth=False, serial=False, training=False,
+                 attention_type='scale_spatial'):
         super(SegDetectorPP, self).__init__(in_channels, inner_channels, k,
                                             bias, adaptive, smooth, serial, training)
-        self.asf = ASF(inner_channels)
-        self.weights_init(self.asf)
+        self.concat_attention = ScaleFeatureSelection(inner_channels, inner_channels//4,
+                                                      attention_type=attention_type)
+        self.concat_attention.weights_init(self.concat_attention)
 
     def construct(self, features):
 
@@ -213,7 +215,8 @@ class SegDetectorPP(SegDetector):
         p2 = upsample(self.out2(out2))
 
         # Different from DBNet
-        fuse = self.asf((p5, p4, p3, p2))   # size:1/4.plane:1024
+        fuse = ops.Concat(axis=1)((p5, p4, p3, p2))
+        fuse = self.concat_attention(fuse, [p5, p4, p3, p2])
 
         # this is the pred module, not binarization module;
         # We do not correct the name due to the trained model.

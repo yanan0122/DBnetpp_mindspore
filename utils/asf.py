@@ -1,80 +1,170 @@
-from mindspore import Tensor, context
 import mindspore.nn as nn
 import mindspore.ops as ops
+from mindspore.common import initializer as init
 
 
-class SpatialAttention(nn.Cell):
-    def __init__(self, inner_channels, N=4):
-        super(SpatialAttention, self).__init__()
+class ScaleFeatureSelection(nn.Cell):
+    def __init__(self, in_channels, inter_channels , out_features_num=4,
+                 attention_type='scale_spatial'):
+        super(ScaleFeatureSelection, self).__init__()
+        self.in_channels=in_channels
+        self.inter_channels = inter_channels
+        self.out_features_num = out_features_num
 
-        self.channel_wise = nn.SequentialCell([
-            nn.Conv2d(inner_channels, inner_channels // N, 1),
-            nn.Conv2d(inner_channels // N, inner_channels, 1)])
-        self.spatial_wise = nn.SequentialCell([
-            nn.Conv2d(1, 1, 3),
-            nn.Conv2d(1, 1, 1)])
-        self.attention_wise = nn.Conv2d(inner_channels, N, 1)
+        self.conv = nn.Conv2d(in_channels, inter_channels, 3, has_bias=True)
+        self.type = attention_type
+        if self.type == 'scale_spatial':
+            self.enhanced_attention = ScaleSpatialAttention(inter_channels, inter_channels//4,
+                                                            out_features_num)
+        elif self.type == 'scale_channel_spatial':
+            self.enhanced_attention = ScaleChannelSpatialAttention(inter_channels, inter_channels // 4,
+                                                                   out_features_num)
+        elif self.type == 'scale_channel':
+            self.enhanced_attention = ScaleChannelAttention(inter_channels, inter_channels//2,
+                                                            out_features_num)
+        self.interpolate = nn.ResizeBilinear()
 
+    def weights_init(self, c):
+        for m in c.cells():
+            if isinstance(m, nn.Conv2d):
+                m.weight = init.initializer(init.HeNormal(), m.weight.shape)
+            elif isinstance(m, nn.BatchNorm2d):
+                m.gamma = init.initializer('ones', m.gamma.shape)
+                m.beta = init.initializer(1e-4, m.beta.shape)
+
+    def construct(self, concat_x, features_list):
+        concat_x = self.conv(concat_x)
+        score = self.enhanced_attention(concat_x)
+
+        # assert len(features_list) == self.out_features_num
+        if len(features_list) != self.out_features_num:
+            exit(1)
+        if self.type not in ['scale_channel_spatial', 'scale_spatial']:
+            shape = features_list[0].shape[2:]
+            score = self.interpolate(score, size=shape)
+
+        x = []
+        for i in range(self.out_features_num):
+            x.append(score[:, i:i+1] * features_list[i])
+
+        return ops.Concat(axis=1)(x)
+
+
+class ScaleChannelAttention(nn.Cell):
+    def __init__(self, in_planes, out_planes, num_features, init_weight=True):
+        super(ScaleChannelAttention, self).__init__()
+        self.avgpool = ops.ReduceMean()
+        self.fc1 = nn.Conv2d(in_planes, out_planes, 1, has_bias=False)
+        self.bn = nn.BatchNorm2d(out_planes)
+        self.fc2 = nn.Conv2d(out_planes, num_features, 1, has_bias=False)
         self.relu = nn.ReLU()
-        self.sigmoid = nn.Sigmoid()
+        self.softmax = nn.Softmax(axis=1)
+        if init_weight:
+            self.weights_init()
 
-        self.reduce_mean = ops.ReduceMean(True)
-        self.split = ops.Split(1, N)
-        self.stack = ops.Stack(0)
+    def weights_init(self):
+        for m in self.cells():
+            if isinstance(m, nn.Conv2d):
+                m.weight = init.initializer(init.HeNormal(mode='fan_out', nonlinearity='relu'),
+                                            m.weight.shape)
+                if m.bias is not None:
+                    m.bias = init.initializer('zeros', m.bias.shape)
+            elif isinstance(m, nn.BatchNorm2d):
+                m.gamma = init.initializer('ones', m.gamma.shape)
+                m.beta = init.initializer(1e-4, m.beta.shape)
 
     def construct(self, x):
-        x1 = self.channel_wise(x)
-
-        x2 = self.reduce_mean(x1, 1)
-        x2 = self.spatial_wise(x2)
-        x2 = self.relu(x2)
-        x2 = self.spatial_wise(x2)
-        x2 = self.sigmoid(x2)
-
-        y = x1 + x2
-        y = self.attention_wise(y)
-        y = self.sigmoid(y)
-        y = self.stack(self.split(y))
-
-        return y
+        global_x = self.avgpool(x)
+        global_x = self.fc1(global_x)
+        global_x = self.relu(self.bn(global_x))
+        global_x = self.fc2(global_x)
+        global_x = self.softmax(global_x)
+        return global_x
 
 
-class ASF(nn.Cell):
-    def __init__(self, inner_channels, N=4):
-        super(ASF, self).__init__()
-        self.N = N
+class ScaleChannelSpatialAttention(nn.Cell):
+    def __init__(self, in_planes, out_planes, num_features, init_weight=True):
+        super(ScaleChannelSpatialAttention, self).__init__()
+        self.channel_wise = nn.SequentialCell(
+            nn.Conv2d(in_planes, out_planes , 1, has_bias=False),
+            # nn.BatchNorm2d(out_planes),
+            nn.ReLU(),
+            nn.Conv2d(out_planes, in_planes, 1, has_bias=False)
+        )
+        self.spatial_wise = nn.SequentialCell(
+            #Nx1xHxW
+            nn.Conv2d(1, 1, 3, has_bias=False),
+            nn.ReLU(),
+            nn.Conv2d(1, 1, 1, has_bias=False),
+            nn.Sigmoid()
+        )
+        self.attention_wise = nn.SequentialCell(
+            nn.Conv2d(in_planes, num_features, 1, has_bias=False),
+            nn.Sigmoid()
+        )
+        self.sigmoid = nn.Sigmoid()
+        if init_weight:
+            self.weight_init()
 
-        self.conv = nn.Conv2d(inner_channels, inner_channels, 3, has_bias=True)
-        self.spatial_attention = SpatialAttention(inner_channels, N)
+    def weights_init(self):
+        for m in self.cells():
+            if isinstance(m, nn.Conv2d):
+                m.weight = init.initializer(init.HeNormal(mode='fan_out', nonlinearity='relu'),
+                                            m.weight.shape)
+                if m.bias is not None:
+                    m.bias = init.initializer('zeros', m.bias.shape)
+            elif isinstance(m, nn.BatchNorm2d):
+                m.gamma = init.initializer('ones', m.gamma.shape)
+                m.beta = init.initializer(1e-4, m.beta.shape)
 
-        self.concat_1 = ops.Concat(1)
-        self.concat_2 = ops.Concat(2)
-        self.stack = ops.Stack(0)
-        self.split = ops.Split(0, N)
+    def construct(self, x):
+        # global_x = self.avgpool(x)
+        #shape Nx4x1x1
+        x = ops.ReduceMean(keep_dims=True)(x, axis=(-2, -1))
+        global_x = self.sigmoid(self.channel_wise(x))
+        #shape: NxCxHxW
+        global_x = global_x + x
+        #shape:Nx1xHxW
+        x = ops.ReduceMean(keep_dims=True)(global_x, axis=1)
+        global_x = self.spatial_wise(x) + global_x
+        global_x = self.attention_wise(global_x)
+        return global_x
 
-    def construct(self, x: list):
-        X = self.stack(x)
 
-        S = self.conv(self.concat_1(x))
-        A = self.spatial_attention(S)
-        F = self.concat_2(self.split(A * X))
+class ScaleSpatialAttention(nn.Cell):
+    def __init__(self, in_planes, out_planes, num_features, init_weight=True):
+        super(ScaleSpatialAttention, self).__init__()
+        self.spatial_wise = nn.SequentialCell(
+            #Nx1xHxW
+            nn.Conv2d(1, 1, 3, has_bias=False, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(1, 1, 1, has_bias=False),
+            nn.Sigmoid()
+        )
+        self.attention_wise = nn.SequentialCell(
+            nn.Conv2d(in_planes, num_features, 1, has_bias=False),
+            nn.Sigmoid()
+        )
+        if init_weight:
+            self.weights_init()
 
-        return F.squeeze(0)
+    def weights_init(self):
+        for m in self.cells():
+            if isinstance(m, nn.Conv2d):
+                m.weight = init.initializer(init.HeNormal(mode='fan_out', nonlinearity='relu'),
+                                            m.weight.shape)
+                if m.bias is not None:
+                    m.bias = init.initializer('zeros', m.bias.shape)
+            elif isinstance(m, nn.BatchNorm2d):
+                m.gamma = init.initializer('ones', m.gamma.shape)
+                m.beta = init.initializer(1e-4, m.beta.shape)
+
+    def forward(self, x):
+        global_x = ops.ReduceMean(keep_dims=True)(x, axis=1)
+        global_x = self.spatial_wise(global_x) + x
+        global_x = self.attention_wise(global_x)
+        return global_x
 
 
 if __name__ == '__main__':
-    context.set_context(device_id=5, mode=context.GRAPH_MODE)
-
-    std = ops.StandardNormal()
-    split = ops.Split(output_num=4)
-    concat = ops.Concat()
-
-    X = std((4, 16, 64, 50, 100))   # 特征图N, mini-batch, ...
-    X = split(X)
-    X = list(X)
-    for i in range(len(X)):
-        X[i] = X[i].squeeze()
-
-    asf = ASF(256)
-    result = asf(X)
-    print(result.shape)
+    ...
