@@ -20,8 +20,7 @@ class WithEvalCell(nn.Cell):
         super(WithEvalCell, self).__init__(auto_prefix=False)
         self.model = model
         self.dataset = dataset
-        self.validate_measure = QuadMetric().validate_measure
-        self.gather_measure = QuadMetric().gather_measure
+        self.metric = QuadMetric()
         self.post_process = SegDetectorRepresenter()
 
     def construct(self, batch, verbose=True):
@@ -29,7 +28,7 @@ class WithEvalCell(nn.Cell):
 
         preds = self.model(batch['img'])
         boxes, scores = self.post_process(preds, False)
-        raw_metric = self.validate_measure(batch, (boxes, scores))
+        raw_metric = self.metric.validate_measure(batch, (boxes, scores))
 
         cur_frame = batch['img'].shape[0]
         cur_time = time.time() - start
@@ -49,7 +48,7 @@ class WithEvalCell(nn.Cell):
             raw_metrics.append(raw_metric)
             total_frame += cur_frame
             total_time += cur_time
-        metrics = self.gather_measure(raw_metrics)
+        metrics = self.metric.gather_measure(raw_metrics)
 
         print(f'FPS: {total_frame / total_time}')
         print(metrics['recall'].avg, metrics['precision'].avg, metrics['fmeasure'].avg)
@@ -77,5 +76,5 @@ def eval(model: nn.Cell, path: str):
 
 
 if __name__ == '__main__':
-    context.set_context(mode=context.GRAPH_MODE, device_target="Ascend", device_id=5)
-    eval(DBnet(False), './checkpoints/DBnet/DBnet-19_63.ckpt')
+    context.set_context(mode=context.PYNATIVE_MODE, device_target="Ascend", device_id=6)
+    eval(DBnet(isTrain=False), './checkpoints/DBnet/DBnet-19_63.ckpt')
